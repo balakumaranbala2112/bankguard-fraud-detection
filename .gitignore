@@ -1,0 +1,24 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# ML model files
+ml-model/models/*.pkl
+ml-model/data/creditcard.csv
+
+# Node
+node_modules/
+npm-debug.log
+
+# Environment
+.env
+
+# React build
+dist/
+build/
+
+# OS
+.DS_Store
+Thumbs.db
