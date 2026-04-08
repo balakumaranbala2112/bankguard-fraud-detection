@@ -1,9 +1,8 @@
-# ml-model/api/app.py
-
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import joblib
 import numpy as np
+import pandas as pd
 import os
 
 app = Flask(__name__)
@@ -12,7 +11,7 @@ CORS(app)
 # --------------------------------------------------------
 # Step 1 — Load all 3 model files when Flask starts
 # --------------------------------------------------------
-print("⏳ Loading model files...")
+print("Loading model files...")
 
 BASE_DIR     = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR   = os.path.join(BASE_DIR, '..', 'models')
@@ -21,14 +20,30 @@ model         = joblib.load(os.path.join(MODELS_DIR, 'fraud_model.pkl'))
 scaler        = joblib.load(os.path.join(MODELS_DIR, 'scaler.pkl'))
 feature_names = joblib.load(os.path.join(MODELS_DIR, 'feature_names.pkl'))
 
-print("✅ fraud_model.pkl  loaded")
-print("✅ scaler.pkl       loaded")
-print("✅ feature_names.pkl loaded")
-print(f"✅ Model expects {len(feature_names)} features")
-print("✅ Flask is ready to accept requests")
+print("fraud_model.pkl  loaded")
+print("scaler.pkl       loaded")
+print("feature_names.pkl loaded")
+print(f"Model expects {len(feature_names)} features")
+print("Flask is ready to accept requests")
 
 # --------------------------------------------------------
-# Step 2 — Helper function to map probability to risk level
+# Step 2 — Pre-scale Amount and Time ONCE per request
+# --------------------------------------------------------
+def scale_amount_and_time(raw_amount, raw_time):
+    """
+    Scale Amount only using the saved scaler (fitted on 1 feature).
+    Time_Scaled is just a normalized version of raw_time.
+    """
+    scaled_amount = scaler.transform([[raw_amount]])[0][0]
+
+    # Time is typically normalized by dividing by max seconds in 2 days (172800)
+    scaled_time = raw_time / 172800.0
+
+    return scaled_amount, scaled_time
+
+
+# --------------------------------------------------------
+# Step 3 — Helper function to map probability to risk level
 # --------------------------------------------------------
 def get_risk_level(probability):
     if probability >= 0.7:
@@ -53,17 +68,19 @@ def get_risk_level(probability):
             'message'    : 'Transaction approved'
         }
 
+
 # --------------------------------------------------------
-# Step 3 — Map attack type based on fraud patterns
+# Step 4 — Map attack type based on fraud patterns
 # --------------------------------------------------------
 def get_attack_type(data, probability):
     if probability < 0.4:
         return 'NONE'
-    amount = data.get('Amount', 0)
-    is_new_location   = data.get('is_new_location', False)
+
+    amount             = data.get('Amount', 0)
+    is_new_location    = data.get('is_new_location', False)
     is_new_beneficiary = data.get('is_new_beneficiary', False)
-    hour = data.get('transaction_hour', 12)
-    frequency = data.get('transaction_frequency', 1)
+    hour               = data.get('transaction_hour', 12)
+    frequency          = data.get('transaction_frequency', 1)
 
     if amount > 10000:
         return 'LARGE_AMOUNT_FRAUD'
@@ -71,12 +88,13 @@ def get_attack_type(data, probability):
         return 'ACCOUNT_TAKEOVER'
     elif frequency > 5:
         return 'RAPID_SUCCESSION_FRAUD'
-    elif hour >= 1 and hour <= 4:
+    elif 1 <= hour <= 4:
         return 'ODD_HOUR_FRAUD'
     elif is_new_beneficiary:
         return 'NEW_BENEFICIARY_FRAUD'
     else:
         return 'PATTERN_ANOMALY'
+
 
 # --------------------------------------------------------
 # Route 1 — Health check
@@ -89,6 +107,7 @@ def health():
         'model_loaded'  : True,
         'features_count': len(feature_names)
     })
+
 
 # --------------------------------------------------------
 # Route 2 — Main prediction endpoint
@@ -105,38 +124,35 @@ def predict():
                 'error'  : 'No data received'
             }), 400
 
-        # Step B — Build feature array in correct order
-        # feature_names list ensures exact same order as training
+        # Step B — Pre-scale Amount and Time ONCE together
+        raw_amount = float(data.get('Amount', 0))
+        raw_time   = float(data.get('Time', 0))
+        scaled_amount, scaled_time = scale_amount_and_time(raw_amount, raw_time)
+
+        # Step C — Build feature array in the exact order the model expects
         feature_values = []
 
         for feature in feature_names:
             if feature == 'Amount_Scaled':
-                # Scale the amount using saved scaler
-                raw_amount = float(data.get('Amount', 0))
-                scaled     = scaler.transform([[raw_amount]])[0][0]
-                feature_values.append(scaled)
+                feature_values.append(scaled_amount)
 
             elif feature == 'Time_Scaled':
-                # Scale the time using saved scaler
-                raw_time = float(data.get('Time', 0))
-                scaled   = scaler.transform([[raw_time]])[0][0]
-                feature_values.append(scaled)
+                feature_values.append(scaled_time)
 
             else:
-                # All V1-V28 features — use directly
+                # V1–V28 features: use directly (0 if not provided)
                 feature_values.append(float(data.get(feature, 0)))
 
-        # Step C — Convert to numpy array
+        # Step D — Convert to numpy array and predict
         input_array = np.array(feature_values).reshape(1, -1)
 
-        # Step D — Get prediction and probability
-        prediction   = model.predict(input_array)[0]
-        probability  = model.predict_proba(input_array)[0][1]
-        probability  = round(float(probability), 4)
+        prediction  = model.predict(input_array)[0]
+        probability = model.predict_proba(input_array)[0][1]
+        probability = round(float(probability), 4)
 
         # Step E — Get risk level and attack type
-        risk         = get_risk_level(probability)
-        attack_type  = get_attack_type(data, probability)
+        risk        = get_risk_level(probability)
+        attack_type = get_attack_type(data, probability)
 
         # Step F — Build and return response
         response = {
@@ -151,58 +167,57 @@ def predict():
             'attack_type' : attack_type
         }
 
-        print(f"📊 Prediction: {risk['risk_level']} | "
+        print(f"Prediction: {risk['risk_level']} | "
               f"Probability: {probability} | "
               f"Attack: {attack_type}")
 
         return jsonify(response)
 
     except Exception as e:
-        print(f"❌ Error: {str(e)}")
+        print(f"Error: {str(e)}")
         return jsonify({
             'success': False,
             'error'  : str(e)
         }), 500
+
 
 # --------------------------------------------------------
 # Route 3 — Test route with dummy data
 # --------------------------------------------------------
 @app.route('/test', methods=['GET'])
 def test():
-    dummy = {f: 0.0 for f in feature_names}
-    dummy['Amount'] = 500
-    dummy['Time']   = 1000
+    # FIX: use the corrected scale_amount_and_time helper here too
+    scaled_amount, scaled_time = scale_amount_and_time(500.0, 1000.0)
 
     feature_values = []
     for feature in feature_names:
         if feature == 'Amount_Scaled':
-            scaled = scaler.transform([[500.0]])[0][0]
-            feature_values.append(scaled)
+            feature_values.append(scaled_amount)
         elif feature == 'Time_Scaled':
-            scaled = scaler.transform([[1000.0]])[0][0]
-            feature_values.append(scaled)
+            feature_values.append(scaled_time)
         else:
             feature_values.append(0.0)
 
-    input_array  = np.array(feature_values).reshape(1, -1)
-    prediction   = model.predict(input_array)[0]
-    probability  = round(float(model.predict_proba(input_array)[0][1]), 4)
-    risk         = get_risk_level(probability)
+    input_array = np.array(feature_values).reshape(1, -1)
+    prediction  = model.predict(input_array)[0]
+    probability = round(float(model.predict_proba(input_array)[0][1]), 4)
+    risk        = get_risk_level(probability)
 
     return jsonify({
-        'test'        : 'passed',
-        'prediction'  : 'Fraud' if prediction == 1 else 'Normal',
-        'probability' : probability,
-        'risk_level'  : risk['risk_level'],
-        'flag'        : risk['flag'],
-        'action'      : risk['action']
+        'test'       : 'passed',
+        'prediction' : 'Fraud' if prediction == 1 else 'Normal',
+        'probability': probability,
+        'risk_level' : risk['risk_level'],
+        'flag'       : risk['flag'],
+        'action'     : risk['action']
     })
+
 
 # --------------------------------------------------------
 # Start Flask server
 # --------------------------------------------------------
 if __name__ == '__main__':
-    print("\n🚀 Starting BankGuard Flask API...")
+    print("\n Starting BankGuard Flask API...")
     print("   Port    : 5000")
     print("   Health  : http://localhost:5000/health")
     print("   Predict : http://localhost:5000/predict")

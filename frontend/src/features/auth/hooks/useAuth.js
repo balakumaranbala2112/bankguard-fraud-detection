@@ -1,0 +1,29 @@
+import { useAuthStore } from "../authSlice";
+
+export const useAuth = () => {
+  const {
+    user,
+    token,
+    loading,
+    error,
+    login,
+    register,
+    logout,
+    refreshProfile,
+    clearError,
+  } = useAuthStore();
+
+  return {
+    user,
+    token,
+    loading,
+    error,
+    isAuthenticated: !!token,
+    isAdmin: user?.role === "admin",
+    login,
+    register,
+    logout,
+    refreshProfile,
+    clearError,
+  };
+};
