@@ -34,7 +34,7 @@ exports.sendMoney = async (req, res, next) => {
       });
     }
 
-    // Step 2 — Sender (already fetched by authMiddleware)
+    // Step 2 — Sender
     const sender = await User.findById(req.user._id);
     if (!sender) {
       return res.status(404).json({
@@ -87,69 +87,81 @@ exports.sendMoney = async (req, res, next) => {
       .sort({ createdAt: -1 })
       .limit(50);
 
-    // Calculate sender's average transaction amount
+    // ── Calculate average amount ──────────────────────
+    // New user fallback: use usualAmountMax as baseline
     const avgAmount =
       history.length > 0
         ? history.reduce((sum, t) => sum + t.amount, 0) / history.length
         : sender.usualAmountMax || 2000;
 
-    // Count transactions in last 2 minutes (velocity check)
+    // ── Velocity check ────────────────────────────────
     const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000);
     const recentCount = await Transaction.countDocuments({
       sender: sender._id,
       createdAt: { $gte: twoMinsAgo },
     });
 
-    // Check if receiver is a known beneficiary
+    // ── Beneficiary check ─────────────────────────────
     const isKnownBeneficiary =
       sender.knownBeneficiaries?.includes(receiver.accountNumber) || false;
 
-    // Current transaction hour
-    const currentHour = hour || new Date().getHours();
+    // ── NEW USER GRACE PERIOD ─────────────────────────
+    // First 3 transactions get relaxed beneficiary rules
+    // This prevents blocking every new user's first payment
+    // All other fraud checks (amount, velocity, time) still apply
+    const isNewUser = history.length < 3;
 
-    // Check if transaction is outside usual hours
+    // ── Hour check ────────────────────────────────────
+    const currentHour = hour || new Date().getHours();
     const isOddHour =
       currentHour < (sender.usualHourStart || 9) ||
       currentHour > (sender.usualHourEnd || 22);
 
-    // Check if amount is unusual (more than 5x user average)
+    // ── Amount checks ─────────────────────────────────
     const isUnusualAmount = avgAmount > 0 && amount > avgAmount * 5;
-
-    // Check if amount exceeds user's usual max
     const exceedsUsualMax = amount > (sender.usualAmountMax || 2000) * 3;
 
     logger.info(
       `Pattern check — avg: ${Math.round(avgAmount)} | ` +
         `amount: ${amount} | recentCount: ${recentCount} | ` +
-        `knownBeneficiary: ${isKnownBeneficiary} | oddHour: ${isOddHour}`,
+        `knownBeneficiary: ${isKnownBeneficiary} | ` +
+        `newUser: ${isNewUser} | oddHour: ${isOddHour}`,
     );
 
     // ── Build V features based on fraud signals ──────────
-    // These mimic what real bank PCA features look like.
-    // Negative values = fraud signals the model was trained on.
+    // Negative values = fraud signals the model was trained on
+    // New users get relaxed signals on beneficiary check only
+    // All other signals (amount, velocity, time) apply to everyone
 
-    // V14 — most important feature (amount anomaly)
+    // V14 — amount anomaly — WORKS FOR EVERYONE
+    // Most important feature — catches large amount fraud
     const v14 = isUnusualAmount || exceedsUsualMax ? -7.2 : 0.1;
 
-    // V17 — velocity / rapid succession signal
+    // V17 — velocity signal — WORKS FOR EVERYONE
+    // Catches rapid succession / bot attacks
     const v17 = recentCount > 3 ? -6.1 : 0.1;
 
     // V12 — new beneficiary signal
-    const v12 = !isKnownBeneficiary ? -5.1 : 0.1;
+    // New users get relaxed signal (-2.0 instead of -5.1)
+    // for their first 3 transactions (grace period)
+    const v12 = !isKnownBeneficiary ? (isNewUser ? -2.0 : -5.1) : 0.1;
 
-    // V10 — odd hour signal
+    // V10 — odd hour signal — WORKS FOR EVERYONE
+    // Catches sleeping victim / overnight attacks
     const v10 = isOddHour ? -4.2 : 0.1;
 
-    // V4  — new location signal
+    // V4 — new location signal — WORKS FOR EVERYONE
     const v4 = isNewLocation || false ? 3.2 : 0.5;
 
-    // V3  — combined anomaly signal
-    const v3 = isUnusualAmount && !isKnownBeneficiary ? -4.5 : 0.1;
+    // V3 — combined anomaly signal
+    // Only triggers for established users with unusual + new beneficiary
+    const v3 =
+      isUnusualAmount && !isKnownBeneficiary && !isNewUser ? -4.5 : 0.1;
 
-    // V11 — account pattern signal
+    // V11 — velocity pattern signal — WORKS FOR EVERYONE
     const v11 = recentCount > 5 ? 2.8 : 0.1;
 
-    // V16 — location + beneficiary combined
+    // V16 — location + beneficiary combined — WORKS FOR EVERYONE
     const v16 = (isNewLocation || false) && !isKnownBeneficiary ? -3.4 : 0.1;
 
     // Step 7 — Call ML model with real fraud signals
@@ -219,7 +231,8 @@ exports.sendMoney = async (req, res, next) => {
       note: note || "",
     });
 
-    // Step 10 — OTP flow (send after transaction saved — needs transactionId)
+    // Step 10 — OTP flow
+    // Send OTP AFTER transaction saved — we need the transactionId
     if (status === "OTP_PENDING") {
       await Transaction.findByIdAndUpdate(transaction._id, {
         otpExpiresAt: new Date(Date.now() + 5 * 60 * 1000),
@@ -230,6 +243,7 @@ exports.sendMoney = async (req, res, next) => {
 
     // Step 11 — Transfer balance immediately for APPROVED
     if (status === "APPROVED") {
+      // Re-fetch to get latest balance
       const freshSender = await User.findById(sender._id);
       if (freshSender.balance < amount) {
         await Transaction.findByIdAndUpdate(transaction._id, {
@@ -241,8 +255,12 @@ exports.sendMoney = async (req, res, next) => {
         });
       }
 
-      await User.findByIdAndUpdate(sender._id, { $inc: { balance: -amount } });
-      await User.findByIdAndUpdate(receiver._id, { $inc: { balance: amount } });
+      await User.findByIdAndUpdate(sender._id, {
+        $inc: { balance: -amount },
+      });
+      await User.findByIdAndUpdate(receiver._id, {
+        $inc: { balance: amount },
+      });
 
       // Add receiver to sender's known beneficiaries
       await User.findByIdAndUpdate(sender._id, {
@@ -391,14 +409,14 @@ exports.verifyOTP = async (req, res, next) => {
     );
 
     // Step 11 — Create Razorpay order
-    const razorpayOrder = await razorpayService.createOrder(transaction.amount);
+    // const razorpayOrder = await razorpayService.createOrder(transaction.amount);
 
     logger.info("OTP verified — transaction approved");
 
     res.json({
       success: true,
       message: "OTP verified — transaction approved",
-      requiresPayment: true,
+      requiresPayment: false,
       razorpayOrder,
       transaction: updatedTransaction,
     });

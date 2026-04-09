@@ -70,7 +70,7 @@ export const ATTACK_TYPES = {
 // Added FLAGGED so status labels render correctly in transaction history.
 export const TXN_STATUS = {
   APPROVED: "APPROVED",
-  FLAGGED: "FLAGGED",
+  FLAGGED: "OTP_PENDING",
   BLOCKED: "BLOCKED",
 };
 

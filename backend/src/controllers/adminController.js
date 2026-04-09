@@ -15,10 +15,10 @@ exports.getAllUsers = async (req, res, next) => {
     res.json({
       success: true,
       count: users.length,
-      users: users,
+      users,
     });
   } catch (error) {
-    logger.error(`❌ Get users error: ${error.message}`);
+    logger.error(`Get users error: ${error.message}`);
     next(error);
   }
 };
@@ -28,19 +28,34 @@ exports.getAllUsers = async (req, res, next) => {
 // --------------------------------------------------------
 exports.getAllTransactions = async (req, res, next) => {
   try {
-    const transactions = await Transaction.find()
-      .populate("sender", "name accountNumber")
-      .populate("receiver", "name accountNumber")
-      .sort({ createdAt: -1 })
-      .limit(50);
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 50);
+    const skip = (page - 1) * limit;
+
+    const [transactions, total] = await Promise.all([
+      Transaction.find()
+        .populate("sender", "name accountNumber email")
+        .populate("receiver", "name accountNumber email")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Transaction.countDocuments(),
+    ]);
 
     res.json({
       success: true,
       count: transactions.length,
-      transactions: transactions,
+      transactions,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
     });
   } catch (error) {
-    logger.error(`❌ Get transactions error: ${error.message}`);
+    logger.error(`Get transactions error: ${error.message}`);
     next(error);
   }
 };
@@ -50,18 +65,41 @@ exports.getAllTransactions = async (req, res, next) => {
 // --------------------------------------------------------
 exports.getStats = async (req, res, next) => {
   try {
-    const totalUsers = await User.countDocuments();
-    const totalTransactions = await Transaction.countDocuments();
-    const blockedCount = await Transaction.countDocuments({
+    const [
+      totalUsers,
+      totalTransactions,
+      blockedCount,
+      flaggedCount,
+      approvedCount,
+      totalAlerts,
+      unreadAlerts,
+    ] = await Promise.all([
+      User.countDocuments({ role: "user" }),
+      Transaction.countDocuments(),
+      Transaction.countDocuments({ status: "BLOCKED" }),
+      Transaction.countDocuments({
+        status: { $in: ["FLAGGED", "OTP_PENDING"] },
+      }),
+      Transaction.countDocuments({ status: "APPROVED" }),
+      Alert.countDocuments(),
+      Alert.countDocuments({ isRead: false }),
+    ]);
+
+    // Calculate total money blocked
+    const blockedTransactions = await Transaction.find({
       status: "BLOCKED",
-    });
-    const flaggedCount = await Transaction.countDocuments({
-      status: "FLAGGED",
-    });
-    const approvedCount = await Transaction.countDocuments({
-      status: "APPROVED",
-    });
-    const totalAlerts = await Alert.countDocuments();
+    }).select("amount");
+    const totalBlocked = blockedTransactions.reduce(
+      (sum, t) => sum + t.amount,
+      0,
+    );
+
+    // Attack type breakdown
+    const attackBreakdown = await Transaction.aggregate([
+      { $match: { attackType: { $ne: "NONE" } } },
+      { $group: { _id: "$attackType", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ]);
 
     res.json({
       success: true,
@@ -72,10 +110,13 @@ exports.getStats = async (req, res, next) => {
         flaggedCount,
         approvedCount,
         totalAlerts,
+        unreadAlerts,
+        totalBlocked,
+        attackBreakdown,
       },
     });
   } catch (error) {
-    logger.error(`❌ Get stats error: ${error.message}`);
+    logger.error(`Get stats error: ${error.message}`);
     next(error);
   }
 };

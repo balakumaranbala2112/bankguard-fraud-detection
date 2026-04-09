@@ -1,33 +1,79 @@
-import { formatDateTime, formatCurrency } from '@/shared/utils'
+import { formatDateTime, formatCurrency } from "@/shared/utils";
+import { AlertTriangle, ShieldAlert, ShieldCheck } from "lucide-react";
 
-const severityStyle = {
-  HIGH:   { wrap: 'border-l-4 border-danger-500 bg-danger-50',  dot: 'bg-danger-500',  text: 'text-danger-700' },
-  MEDIUM: { wrap: 'border-l-4 border-warn-500 bg-warn-500/8',   dot: 'bg-warn-500',    text: 'text-warn-700' },
-  LOW:    { wrap: 'border-l-4 border-success-500 bg-success-500/8', dot: 'bg-success-500', text: 'text-success-700' },
-}
+const SEVERITY = {
+  HIGH: {
+    border: "#dc2626",
+    bg: "#fef2f2",
+    iconBg: "#fee2e2",
+    Icon: AlertTriangle,
+    iconColor: "#dc2626",
+    labelColor: "#991b1b",
+  },
+  MEDIUM: {
+    border: "#d97706",
+    bg: "#fffbeb",
+    iconBg: "#fef3c7",
+    Icon: ShieldAlert,
+    iconColor: "#d97706",
+    labelColor: "#92400e",
+  },
+  LOW: {
+    border: "#16a34a",
+    bg: "#f0fdf4",
+    iconBg: "#dcfce7",
+    Icon: ShieldCheck,
+    iconColor: "#16a34a",
+    labelColor: "#166534",
+  },
+};
 
 export default function AlertCard({ alert }) {
-  const s = severityStyle[alert.severity || alert.riskLevel] || severityStyle.MEDIUM
+  const level = alert.severity || alert.riskLevel || "MEDIUM";
+  const s = SEVERITY[level] || SEVERITY.MEDIUM;
+  const { Icon } = s;
 
   return (
-    <div className={`rounded-xl p-4 ${s.wrap}`}>
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 mt-0.5 ${s.dot}`} />
-          <div>
-            <p className={`text-sm font-semibold ${s.text}`}>
-              {alert.attackType || alert.type || 'Fraud Alert'}
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+        .alert-card {
+          display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+          padding: 14px 16px; border-radius: 12px; border-left: 3px solid;
+          font-family: 'DM Sans', sans-serif;
+        }
+        .alert-card-left  { display: flex; align-items: flex-start; gap: 11px; flex: 1; min-width: 0; }
+        .alert-icon-wrap  { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+        .alert-type       { font-size: 13px; font-weight: 600; margin: 0 0 3px; }
+        .alert-msg        { font-size: 12px; color: #64748b; margin: 0; line-height: 1.5; }
+        .alert-card-right { text-align: right; flex-shrink: 0; }
+        .alert-amount     { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 600; color: #0f172a; margin: 0 0 3px; }
+        .alert-time       { font-size: 11px; color: #94a3b8; margin: 0; }
+      `}</style>
+
+      <div
+        className="alert-card"
+        style={{ background: s.bg, borderLeftColor: s.border }}
+      >
+        <div className="alert-card-left">
+          <div className="alert-icon-wrap" style={{ background: s.iconBg }}>
+            <Icon size={16} color={s.iconColor} strokeWidth={2} />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <p className="alert-type" style={{ color: s.labelColor }}>
+              {alert.attackType || alert.type || "Fraud Alert"}
             </p>
-            <p className="text-xs text-gray-500 mt-0.5">{alert.message || alert.description}</p>
+            <p className="alert-msg">{alert.message || alert.description}</p>
           </div>
         </div>
-        <div className="text-right flex-shrink-0">
+
+        <div className="alert-card-right">
           {alert.amount && (
-            <p className="text-sm font-mono font-bold text-surface-900">{formatCurrency(alert.amount)}</p>
+            <p className="alert-amount">{formatCurrency(alert.amount)}</p>
           )}
-          <p className="text-xs text-gray-400">{formatDateTime(alert.createdAt)}</p>
+          <p className="alert-time">{formatDateTime(alert.createdAt)}</p>
         </div>
       </div>
-    </div>
-  )
+    </>
+  );
 }
