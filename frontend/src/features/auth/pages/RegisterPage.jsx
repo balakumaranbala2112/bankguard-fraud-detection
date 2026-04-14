@@ -64,8 +64,13 @@ export default function RegisterPage() {
   };
 
   const inputCls = (f) =>
-    `w-full px-4 py-3 rounded-2xl text-sm text-slate-800 placeholder-slate-300 outline-none border-2 transition-all duration-150 bg-white
-     ${focused === f ? "border-indigo-400 shadow-sm shadow-indigo-100" : err(f) ? "border-rose-300 bg-rose-50/40" : "border-slate-200 hover:border-slate-300"}`;
+    `w-full px-4 py-2.5 rounded-xl text-sm text-slate-900 placeholder-slate-300 outline-none border-2 transition-all duration-150 bg-white
+     ${focused === f
+      ? "border-blue-500 shadow-sm shadow-blue-100"
+      : err(f)
+        ? "border-rose-300 bg-rose-50/60"
+        : "border-slate-200 hover:border-slate-300"
+    }`;
 
   const fields = [
     {
@@ -102,35 +107,57 @@ export default function RegisterPage() {
   return (
     <div className="flex min-h-screen bg-slate-50">
       {/* ── Left panel ── */}
-      <div className="hidden lg:flex flex-col justify-between w-[42%] flex-shrink-0 bg-indigo-600 px-14 py-12 relative overflow-hidden">
-        {/* decorative circles */}
-        <div className="absolute rounded-full pointer-events-none -top-20 -right-20 w-72 h-72 bg-indigo-500/40" />
-        <div className="absolute w-64 h-64 rounded-full pointer-events-none -bottom-16 -left-16 bg-indigo-700/50" />
-        <div className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none top-1/2 left-1/2 w-96 h-96 bg-indigo-500/20" />
+      <div className="hidden lg:flex w-[460px] flex-shrink-0 bg-slate-950 flex-col justify-between p-12 relative overflow-hidden">
+        {/* grid */}
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px)",
+            backgroundSize: "32px 32px",
+          }}
+        />
+        {/* diagonal accent lines */}
+        <svg
+          className="absolute inset-0 w-full h-full opacity-[0.04] pointer-events-none"
+          xmlns="http://www.w3.org/2000/svg"
+          preserveAspectRatio="none"
+        >
+          <line x1="0" y1="0" x2="460" y2="100%" stroke="white" strokeWidth="1" />
+          <line x1="120" y1="0" x2="580" y2="100%" stroke="white" strokeWidth="1" />
+          <line x1="-120" y1="0" x2="340" y2="100%" stroke="white" strokeWidth="1" />
+          <line x1="0" y1="30%" x2="460" y2="0" stroke="white" strokeWidth="0.5" />
+          <line x1="0" y1="70%" x2="460" y2="40%" stroke="white" strokeWidth="0.5" />
+          <rect x="12" y="12" width="calc(100% - 24px)" height="calc(100% - 24px)" rx="6" fill="none" stroke="white" strokeWidth="0.6" />
+        </svg>
+
+        {/* orbs */}
+        <div className="absolute rounded-full pointer-events-none -top-28 -left-28 w-96 h-96 bg-blue-600/20 blur-3xl" />
+        <div className="absolute rounded-full pointer-events-none -bottom-24 -right-24 w-80 h-80 bg-indigo-500/15 blur-3xl" />
 
         {/* Brand */}
         <div className="relative z-10 flex items-center gap-3">
-          <div className="flex items-center justify-center border w-9 h-9 rounded-xl bg-white/20 border-white/30">
-            <ShieldCheck size={17} color="#fff" strokeWidth={2} />
+          <div className="flex items-center justify-center flex-shrink-0 bg-blue-600 w-9 h-9 rounded-xl shadow-lg shadow-blue-900/40">
+            <ShieldCheck size={18} color="#fff" strokeWidth={2} />
           </div>
-          <span className="text-sm font-bold tracking-tight text-white">
-            FraudShield
+          <span className="text-base font-bold tracking-tight text-white">
+            BankGuard
           </span>
         </div>
 
         {/* Hero */}
         <div className="relative z-10 space-y-5">
           <div className="space-y-2">
-            <p className="text-xs font-semibold tracking-[0.18em] uppercase text-indigo-200">
+            <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-blue-400">
               Get started for free
             </p>
             <h1 className="text-[2.4rem] font-bold text-white leading-[1.2] tracking-tight">
               Join the future
               <br />
-              of <span className="text-indigo-200">secure banking</span>
+              of <span className="text-blue-400">secure banking</span>
             </h1>
           </div>
-          <p className="max-w-xs text-sm leading-relaxed text-indigo-100/80">
+          <p className="max-w-xs text-sm leading-relaxed text-slate-400">
             Create your account and get peace of mind with every transaction you
             make.
           </p>
@@ -138,35 +165,47 @@ export default function RegisterPage() {
           <div className="pt-1 space-y-3">
             {BENEFITS.map((b) => (
               <div key={b} className="flex items-center gap-3">
-                <div className="flex items-center justify-center flex-shrink-0 w-5 h-5 rounded-full bg-white/20">
-                  <CheckCircle2 size={12} color="#fff" strokeWidth={2.5} />
+                <div className="flex items-center justify-center flex-shrink-0 w-5 h-5 rounded-full bg-blue-500/20 border border-blue-400/10">
+                  <CheckCircle2 size={11} color="#93c5fd" strokeWidth={2.5} />
                 </div>
-                <p className="text-sm text-indigo-100">{b}</p>
+                <p className="text-sm text-slate-400">{b}</p>
               </div>
             ))}
           </div>
         </div>
 
-        <p className="relative z-10 text-xs text-indigo-300/60">
+        <p className="relative z-10 text-xs text-slate-600">
           Trusted by 50,000+ users worldwide
         </p>
       </div>
 
       {/* ── Right: form ── */}
-      <div className="flex items-center justify-center flex-1 px-6 py-10">
+      <div className="flex items-center justify-center flex-1 px-6 py-10 relative bg-slate-50">
+        {/* subtle grid on right */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px)",
+            backgroundSize: "28px 28px",
+          }}
+        />
+        {/* center glow to lift form */}
+        <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_60%_50%_at_50%_50%,rgba(255,255,255,0.9)_0%,transparent_100%)]" />
+
         <motion.div
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          className="w-full max-w-[400px]"
+          className="w-full max-w-[400px] relative z-10"
         >
           {/* Mobile brand */}
           <div className="flex items-center gap-2.5 mb-8 lg:hidden">
-            <div className="flex items-center justify-center w-8 h-8 bg-indigo-600 rounded-xl">
-              <ShieldCheck size={15} color="#fff" strokeWidth={2} />
+            <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-xl">
+              <ShieldCheck size={16} color="#fff" strokeWidth={2} />
             </div>
             <span className="text-sm font-bold text-slate-800">
-              FraudShield
+              BankGuard
             </span>
           </div>
 
@@ -182,7 +221,7 @@ export default function RegisterPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {fields.map(({ name, label, Icon, type, placeholder, hint }) => (
               <div key={name}>
-                <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">
+                <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-[0.12em] mb-2">
                   <Icon size={11} strokeWidth={2.5} />
                   {label}
                 </label>
@@ -215,7 +254,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center justify-center w-full gap-2 py-3 mt-1 text-sm font-semibold text-white transition-all bg-indigo-600 shadow-sm group rounded-2xl hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed shadow-indigo-200"
+              className="flex items-center justify-center w-full gap-2 py-2.5 mt-2 text-sm font-semibold text-white transition-all bg-blue-600 shadow-md shadow-blue-200 group rounded-xl hover:bg-blue-700 active:bg-blue-800 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
@@ -242,7 +281,7 @@ export default function RegisterPage() {
 
           <Link
             to="/login"
-            className="flex items-center justify-center w-full py-3 text-sm font-semibold transition-all border-2 rounded-2xl border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-600"
+            className="flex items-center justify-center w-full py-3 text-sm font-semibold transition-all border-2 rounded-2xl border-slate-200 hover:border-slate-300 hover:bg-slate-100 text-slate-600"
           >
             Sign in instead
           </Link>

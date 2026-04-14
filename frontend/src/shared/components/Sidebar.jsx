@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { formatCurrency } from "@/shared/utils";
@@ -10,182 +11,169 @@ import {
   ShieldCheck,
   LogOut,
   Star,
+  Menu,
+  X,
 } from "lucide-react";
 
 const NAV = [
   { icon: LayoutDashboard, label: "Dashboard", to: "/dashboard" },
-  { icon: SendHorizontal, label: "Send Money", to: "/send" },
-  { icon: ClockArrowUp, label: "History", to: "/history" },
-  { icon: TriangleAlert, label: "Alerts", to: "/alerts" },
-  { icon: UserRound, label: "Profile", to: "/profile" },
+  { icon: SendHorizontal,  label: "Send Money", to: "/send" },
+  { icon: ClockArrowUp,   label: "History",    to: "/history" },
+  { icon: TriangleAlert,  label: "Alerts",     to: "/alerts" },
+  { icon: UserRound,      label: "Profile",    to: "/profile" },
 ];
 
 const ADMIN_NAV = { icon: Star, label: "Admin", to: "/admin" };
 
+/* ── shared nav link ── */
+function SidebarLink({ icon: Icon, label, to, onClick }) {
+  return (
+    <NavLink
+      to={to}
+      onClick={onClick}
+      className={({ isActive }) =>
+        `flex items-center gap-2.5 px-3 py-2.5 rounded-[9px] text-[13px] font-medium transition-colors duration-100 no-underline
+         ${isActive
+           ? "bg-blue-900 text-blue-100 [&>svg]:text-blue-300"
+           : "text-slate-500 hover:bg-white/5 hover:text-slate-300"}`
+      }
+    >
+      <Icon size={16} strokeWidth={2} className="shrink-0" />
+      {label}
+    </NavLink>
+  );
+}
+
+/* ── sidebar inner content ── */
+function SidebarContent({ user, navItems, onNav, onLogout }) {
+  const initials = user?.name?.[0]?.toUpperCase() || "U";
+
+  return (
+    <div className="flex flex-col h-full font-sans">
+      {/* Logo */}
+      <div className="flex items-center gap-2.5 px-5 py-5 border-b border-white/[0.06]">
+        <div className="w-[34px] h-[34px] rounded-[9px] bg-blue-600 flex items-center justify-center shrink-0">
+          <ShieldCheck size={18} color="#fff" strokeWidth={2} />
+        </div>
+        <div>
+          <p className="text-[14px] font-bold text-slate-100 m-0 leading-tight">BankGuard</p>
+          <p className="text-[11px] text-slate-500 m-0">Banking Platform</p>
+        </div>
+      </div>
+
+      {/* Balance */}
+      {user && (
+        <div className="mx-3.5 mt-3.5 px-4 py-3.5 bg-white/[0.04] border border-white/[0.07] rounded-xl">
+          <p className="text-[10px] tracking-widest uppercase text-slate-500 mb-1.5 m-0">
+            Available balance
+          </p>
+          <p className="font-mono text-[18px] font-medium text-slate-100 m-0 mb-1 leading-none">
+            {formatCurrency(user.balance || 0)}
+          </p>
+          <p className="font-mono text-[11px] text-slate-600 m-0">
+            {user.accountNumber || "—"}
+          </p>
+        </div>
+      )}
+
+      {/* Nav */}
+      <nav className="flex-1 px-2.5 py-3 flex flex-col gap-0.5 overflow-y-auto">
+        {navItems.map(({ icon, label, to }) => (
+          <SidebarLink key={to} icon={icon} label={label} to={to} onClick={onNav} />
+        ))}
+      </nav>
+
+      {/* Footer */}
+      <div className="px-3.5 py-3 border-t border-white/[0.06]">
+        <div className="flex items-center gap-2.5 px-2.5 py-2 mb-2">
+          <div className="w-8 h-8 rounded-full bg-blue-900 flex items-center justify-center shrink-0">
+            <span className="text-[12px] font-bold text-blue-300">{initials}</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-semibold text-slate-200 m-0 truncate">{user?.name || "User"}</p>
+            <p className="text-[11px] text-slate-500 m-0 truncate">{user?.email || ""}</p>
+          </div>
+        </div>
+        <button
+          onClick={onLogout}
+          className="flex items-center gap-2.5 w-full px-3 py-2 rounded-[9px] bg-transparent border-none cursor-pointer text-[13px] font-medium text-slate-500 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+        >
+          <LogOut size={15} strokeWidth={2} />
+          Sign out
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function Sidebar() {
   const { user, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const navItems = isAdmin ? [...NAV, ADMIN_NAV] : NAV;
 
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
-  const navItems = isAdmin ? [...NAV, ADMIN_NAV] : NAV;
-  const initials = user?.name?.[0]?.toUpperCase() || "U";
 
   return (
     <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
-
-        .sidebar {
-          position: fixed; top: 0; left: 0; height: 100%; z-index: 40;
-          width: var(--sidebar-w, 240px);
-          background: #0f172a;
-          display: flex; flex-direction: column;
-          font-family: 'DM Sans', sans-serif;
-          border-right: 1px solid rgba(255,255,255,0.06);
-        }
-
-        /* Logo */
-        .sb-logo {
-          display: flex; align-items: center; gap: 10px;
-          padding: 20px 20px 18px;
-          border-bottom: 1px solid rgba(255,255,255,0.06);
-        }
-        .sb-logo-icon {
-          width: 34px; height: 34px; border-radius: 9px;
-          background: #2563eb;
-          display: flex; align-items: center; justify-content: center;
-          flex-shrink: 0;
-        }
-        .sb-logo-name {
-          font-size: 14px; font-weight: 700; color: #f8fafc; margin: 0; line-height: 1.2;
-        }
-        .sb-logo-sub {
-          font-size: 11px; color: #475569; margin: 0;
-        }
-
-        /* Balance */
-        .sb-balance {
-          margin: 14px 14px 0;
-          padding: 14px 16px;
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.07);
-          border-radius: 12px;
-        }
-        .sb-balance-label {
-          font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
-          color: #475569; margin: 0 0 6px;
-        }
-        .sb-balance-amount {
-          font-family: 'DM Mono', monospace; font-size: 18px; font-weight: 500;
-          color: #f8fafc; margin: 0 0 4px; line-height: 1;
-        }
-        .sb-balance-acct {
-          font-family: 'DM Mono', monospace; font-size: 11px; color: #334155; margin: 0;
-        }
-
-        /* Nav */
-        .sb-nav { flex: 1; padding: 12px 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
-
-        .sb-link {
-          display: flex; align-items: center; gap: 10px;
-          padding: 9px 12px; border-radius: 9px;
-          font-size: 13px; font-weight: 500; color: #64748b;
-          text-decoration: none;
-          transition: background 0.12s, color 0.12s;
-          position: relative;
-        }
-        .sb-link:hover { background: rgba(255,255,255,0.05); color: #cbd5e1; }
-        .sb-link.active { background: #1e3a8a; color: #eff6ff; }
-        .sb-link.active .sb-link-icon { color: #93c5fd; }
-
-        .sb-link-icon { flex-shrink: 0; color: inherit; transition: color 0.12s; }
-
-        /* User footer */
-        .sb-footer {
-          padding: 12px 14px;
-          border-top: 1px solid rgba(255,255,255,0.06);
-        }
-        .sb-user {
-          display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
-          padding: 8px 10px; border-radius: 9px;
-        }
-        .sb-avatar {
-          width: 32px; height: 32px; border-radius: 50%;
-          background: #1e3a8a; display: flex; align-items: center; justify-content: center;
-          flex-shrink: 0;
-        }
-        .sb-avatar span { font-size: 12px; font-weight: 700; color: #93c5fd; }
-        .sb-user-name  { font-size: 13px; font-weight: 600; color: #e2e8f0; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .sb-user-email { font-size: 11px; color: #475569; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-        .sb-logout {
-          display: flex; align-items: center; gap: 10px;
-          width: 100%; padding: 9px 12px; border-radius: 9px;
-          background: none; border: none; cursor: pointer;
-          font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
-          color: #475569; transition: background 0.12s, color 0.12s;
-        }
-        .sb-logout:hover { background: rgba(239,68,68,0.08); color: #f87171; }
-      `}</style>
-
-      <aside className="sidebar">
-        {/* ── Logo ── */}
-        <div className="sb-logo">
-          <div className="sb-logo-icon">
-            <ShieldCheck size={18} color="#fff" strokeWidth={2} />
+      {/* ── Mobile top bar ── */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 h-14 bg-slate-950 border-b border-white/[0.06]">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
+            <ShieldCheck size={15} color="#fff" strokeWidth={2} />
           </div>
-          <div>
-            <p className="sb-logo-name">FraudShield</p>
-            <p className="sb-logo-sub">Banking Platform</p>
-          </div>
+          <span className="text-[14px] font-bold text-slate-100">BankGuard</span>
         </div>
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-400 hover:bg-white/10 hover:text-white transition-colors border-none bg-transparent cursor-pointer"
+          aria-label="Open menu"
+        >
+          <Menu size={20} />
+        </button>
+      </div>
 
-        {/* ── Balance ── */}
-        {user && (
-          <div className="sb-balance">
-            <p className="sb-balance-label">Available balance</p>
-            <p className="sb-balance-amount">
-              {formatCurrency(user.balance || 0)}
-            </p>
-            <p className="sb-balance-acct">{user.accountNumber || "—"}</p>
-          </div>
-        )}
+      {/* ── Mobile drawer backdrop ── */}
+      {mobileOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
 
-        {/* ── Nav ── */}
-        <nav className="sb-nav">
-          {navItems.map(({ icon: Icon, label, to }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                `sb-link${isActive ? " active" : ""}`
-              }
-            >
-              <Icon size={16} strokeWidth={2} className="sb-link-icon" />
-              {label}
-            </NavLink>
-          ))}
-        </nav>
+      {/* ── Mobile drawer ── */}
+      <aside
+        className={`md:hidden fixed top-0 left-0 h-full z-50 w-72 bg-slate-950 border-r border-white/[0.06] transition-transform duration-300 ease-out
+          ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
+      >
+        {/* Close button */}
+        <button
+          onClick={() => setMobileOpen(false)}
+          className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-white/10 hover:text-white border-none bg-transparent cursor-pointer"
+          aria-label="Close menu"
+        >
+          <X size={17} />
+        </button>
+        <SidebarContent
+          user={user}
+          navItems={navItems}
+          onNav={() => setMobileOpen(false)}
+          onLogout={handleLogout}
+        />
+      </aside>
 
-        {/* ── User + Logout ── */}
-        <div className="sb-footer">
-          <div className="sb-user">
-            <div className="sb-avatar">
-              <span>{initials}</span>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p className="sb-user-name">{user?.name || "User"}</p>
-              <p className="sb-user-email">{user?.email || ""}</p>
-            </div>
-          </div>
-          <button className="sb-logout" onClick={handleLogout}>
-            <LogOut size={15} strokeWidth={2} />
-            Sign out
-          </button>
-        </div>
+      {/* ── Desktop fixed sidebar ── */}
+      <aside className="hidden md:flex fixed top-0 left-0 h-full w-60 flex-col bg-slate-950 border-r border-white/[0.06] z-40">
+        <SidebarContent
+          user={user}
+          navItems={navItems}
+          onNav={undefined}
+          onLogout={handleLogout}
+        />
       </aside>
     </>
   );

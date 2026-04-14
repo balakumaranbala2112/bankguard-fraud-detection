@@ -25,5 +25,6 @@ router.post(
 );
 router.get("/history", protect, transactionController.getHistory);
 router.get("/alerts", protect, transactionController.getAlerts);
+router.get("/recent-recipients", protect, transactionController.getRecentRecipients);
 
 module.exports = router;

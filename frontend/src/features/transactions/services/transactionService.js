@@ -7,4 +7,5 @@ export const transactionService = {
   verifyPayment: (data) => api.post(ENDPOINTS.VERIFY_PAYMENT, data),
   getHistory: (params) => api.get(ENDPOINTS.HISTORY, { params }),
   getAlerts:  (params) => api.get(ENDPOINTS.ALERTS,  { params }),
+  getRecentRecipients: () => api.get(ENDPOINTS.RECENT_RECIPIENTS),
 }

@@ -94,26 +94,37 @@ exports.getStats = async (req, res, next) => {
       0,
     );
 
+    // Calculate total volume (approved transactions)
+    const volumeResult = await Transaction.aggregate([
+      { $match: { status: "APPROVED" } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+    const totalVolume = volumeResult.length > 0 ? volumeResult[0].total : 0;
+
     // Attack type breakdown
     const attackBreakdown = await Transaction.aggregate([
       { $match: { attackType: { $ne: "NONE" } } },
       { $group: { _id: "$attackType", count: { $sum: 1 } } },
       { $sort: { count: -1 } },
     ]);
+    
+    const mediumCount = await Transaction.countDocuments({
+      status: "OTP_PENDING",
+    });
 
     res.json({
       success: true,
-      stats: {
-        totalUsers,
-        totalTransactions,
-        blockedCount,
-        flaggedCount,
-        approvedCount,
-        totalAlerts,
-        unreadAlerts,
-        totalBlocked,
-        attackBreakdown,
-      },
+      totalUsers,
+      totalTransactions,
+      blockedCount,
+      mediumCount,
+      flaggedCount,
+      approvedCount,
+      totalAlerts,
+      unreadAlerts,
+      totalBlocked,
+      totalVolume,
+      attackBreakdown,
     });
   } catch (error) {
     logger.error(`Get stats error: ${error.message}`);

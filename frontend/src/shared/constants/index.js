@@ -13,6 +13,7 @@ export const ENDPOINTS = {
   VERIFY_OTP: "/transactions/verify-otp",
   VERIFY_PAYMENT: "/transactions/verify-payment",
   HISTORY: "/transactions/history",
+  RECENT_RECIPIENTS: "/transactions/recent-recipients",
 
   // Alerts
   // FIX: was '/transactions/alerts' — but alertRoutes.js is mounted at

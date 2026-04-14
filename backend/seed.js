@@ -64,7 +64,7 @@ const userData = [
   },
   {
     name: "Demo User",
-    email: "demo@fraudshield.com",
+    email: "demo@BankGuard.com",
     password: "demo1234",
     phone: "+919000000005",
     usualLocation: "Chennai",
@@ -98,6 +98,30 @@ const userData = [
     usualHourEnd: 23,
     balance: 0,
     role: "admin",
+  },
+  {
+    name: "Virat Kohli",
+    email: "virat@bankguard.com",
+    password: "password123",
+    phone: "+919000000007",
+    usualLocation: "Delhi",
+    usualAmountMin: 500,
+    usualAmountMax: 5000,
+    usualHourStart: 6,
+    usualHourEnd: 22,
+    balance: 150000,
+  },
+  {
+    name: "Rohit Sharma",
+    email: "rohit@bankguard.com",
+    password: "password123",
+    phone: "+919000000008",
+    usualLocation: "Mumbai",
+    usualAmountMin: 300,
+    usualAmountMax: 4000,
+    usualHourStart: 9,
+    usualHourEnd: 23,
+    balance: 120000,
   },
 ];
 
@@ -300,7 +324,7 @@ const seedDB = async () => {
       `  Sangeetha    | sangeetha@bankguard.com   | ${sang.accountNumber}  | Rs 100,000`,
     );
     logger.info(
-      `  Demo User    | demo@fraudshield.com      | ${demo.accountNumber}  | Rs 100,000`,
+      `  Demo User    | demo@BankGuard.com      | ${demo.accountNumber}  | Rs 100,000`,
     );
     logger.info(
       `  Attacker     | attacker@bankguard.com    | ${users[5].accountNumber}  | Rs 50,000`,
@@ -310,7 +334,7 @@ const seedDB = async () => {
     );
     logger.info("");
     logger.info("Demo login:");
-    logger.info("  Email    : demo@fraudshield.com");
+    logger.info("  Email    : demo@BankGuard.com");
     logger.info("  Password : demo1234");
     logger.info("");
     logger.info("Fraud demo scripts:");

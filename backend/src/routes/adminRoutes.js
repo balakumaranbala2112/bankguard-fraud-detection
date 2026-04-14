@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const adminController = require("../controllers/adminController");
 const { protect } = require("../middleware/authMiddleware");
+const logger = require("../utils/logger");
 
 // ── Admin role guard ───────────────────────────────
 const isAdmin = (req, res, next) => {

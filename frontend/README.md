@@ -1,6 +1,6 @@
-# FraudShield Frontend
+# BankGuard Frontend
 
-React 18 + Vite + Tailwind CSS frontend for the FraudShield intelligent fraud detection banking platform.
+React 18 + Vite + Tailwind CSS frontend for the BankGuard intelligent fraud detection banking platform.
 
 ## Stack
 

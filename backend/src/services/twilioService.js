@@ -85,31 +85,49 @@ const twilioService = {
   },
 
   // --------------------------------------------------------
-  // Send fraud alert SMS for HIGH risk transactions
+  // Send fraud alert SMS for HIGH and MEDIUM risk transactions
+  //
+  // HIGH  → OTP required — transaction is being verified
+  // MEDIUM → OTP required — suspicious activity detected
+  //
+  // NOTE: in the current flow BOTH risk levels go to OTP_PENDING,
+  // then sendOTP() is called separately to send the actual OTP code.
+  // This SMS is just the *warning alert* explaining WHY they are
+  // getting an OTP, so users don't ignore it.
   // --------------------------------------------------------
-  async sendFraudAlert(phone, amount, attackType) {
+  async sendFraudAlert(phone, amount, attackType, riskLevel = "HIGH") {
     try {
       const attackMap = {
-        LARGE_AMOUNT_FRAUD: "Large Amount Fraud",
-        ACCOUNT_TAKEOVER: "Account Takeover",
-        RAPID_SUCCESSION_FRAUD: "Rapid Succession Fraud",
-        ODD_HOUR_FRAUD: "Odd Hour Fraud",
-        NEW_BENEFICIARY_FRAUD: "New Beneficiary Fraud",
-        PATTERN_ANOMALY: "Pattern Anomaly",
+        LARGE_AMOUNT_FRAUD:    "Large Amount Fraud",
+        ACCOUNT_TAKEOVER:      "Account Takeover",
+        RAPID_SUCCESSION_FRAUD:"Rapid Succession Fraud",
+        ODD_HOUR_FRAUD:        "Odd Hour Fraud",
+        NEW_BENEFICIARY_FRAUD: "New Beneficiary",
+        PATTERN_ANOMALY:       "Pattern Anomaly",
       };
 
       const attackName = attackMap[attackType] || "Suspicious Activity";
+      const amtStr     = `Rs ${amount.toLocaleString("en-IN")}`;
 
-      await client.messages.create({
-        body: `🚨 BankGuard FRAUD ALERT: A transaction of Rs ${amount} has been BLOCKED. Attack type: ${attackName}. If this was you contact support immediately.`,
-        from: twilioPhone,
-        to: phone,
-      });
+      let body;
+      if (riskLevel === "HIGH") {
+        body =
+          `🚨 BankGuard HIGH RISK ALERT: A transaction of ${amtStr} has been flagged ` +
+          `[${attackName}]. An OTP has been sent to verify it is really you. ` +
+          `If this was NOT you, do NOT enter the OTP and contact support immediately.`;
+      } else {
+        body =
+          `⚠️ BankGuard SECURITY ALERT: A transaction of ${amtStr} looks unusual ` +
+          `[${attackName}]. Please verify it with the OTP being sent to you. ` +
+          `If this was not you, ignore the OTP and contact support.`;
+      }
 
-      logger.info(`✅ Fraud alert SMS sent to ${phone}`);
+      await client.messages.create({ body, from: twilioPhone, to: phone });
+
+      logger.info(`✅ Fraud alert SMS (${riskLevel}) sent to ${phone}`);
       return { success: true };
     } catch (error) {
-      // ✅ LOG but do NOT throw — SMS failure must never block a transaction
+      // SMS failure MUST never block the transaction or OTP flow
       logger.warn(`⚠️ Fraud alert SMS failed (non-fatal): ${error.message}`);
       return { success: false, error: error.message };
     }

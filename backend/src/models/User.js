@@ -57,19 +57,28 @@ const userSchema = new mongoose.Schema(
     },
 
     // ── Pattern fields — define each user's normal behavior ──
+    // NOTE: these start as null/0 for new users and are populated
+    // automatically by learnUserPatterns() as they transact.
+    // We deliberately do NOT set fake defaults (like "Chennai") because
+    // a hardcoded city would incorrectly flag every real city as "new location".
     usualLocation: {
       type: String,
-      default: "Chennai",
+      default: null,   // null = not yet learned; bootstrapped on first transaction
     },
 
     usualAmountMin: {
       type: Number,
-      default: 100,
+      default: 0,      // unknown until first transaction
+    },
+
+    usualAvgAmount: {
+      type: Number,
+      default: 0,      // 0 = no history yet; computed live from Transaction history
     },
 
     usualAmountMax: {
       type: Number,
-      default: 2000,
+      default: 0,      // unknown until first transaction
     },
 
     usualHourStart: {

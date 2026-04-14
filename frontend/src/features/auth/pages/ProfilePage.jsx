@@ -1,42 +1,32 @@
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import { formatCurrency, maskAccount } from "@/shared/utils";
+import { formatCurrency } from "@/shared/utils";
 import {
-  Copy,
-  Check,
-  LogOut,
-  User,
-  Mail,
-  Phone,
-  MapPin,
-  Calendar,
-  CreditCard,
+  Copy, Check, LogOut, User, Mail, Phone,
+  MapPin, Calendar, CreditCard, AlertTriangle,
 } from "lucide-react";
 
-// Safe formatDate function to prevent invalid time errors
 function formatDate(value) {
   if (!value) return "-";
   const date = new Date(value);
   if (isNaN(date)) return "-";
-  return date.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  return date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function maskAccountUI(accNo) {
+  if (!accNo) return "XXXXXXXXXX";
+  return "•".repeat(Math.max(0, accNo.length - 2)) + accNo.slice(-2);
 }
 
 export default function ProfilePage() {
   const { user, refreshProfile, logout } = useAuth();
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied]               = useState(false);
+  const [showLogout, setShowLogout]       = useState(false);
 
-  // Refresh profile on mount
-  useEffect(() => {
-    refreshProfile();
-  }, []);
+  useEffect(() => { refreshProfile(); }, []);
 
-  // Copy account number to clipboard
   const copyAccount = () => {
     if (!user?.accountNumber) return;
     navigator.clipboard.writeText(user.accountNumber);
@@ -45,153 +35,139 @@ export default function ProfilePage() {
     toast.success("Account number copied!");
   };
 
-  if (!user) return <p className="pf-loading">Loading profile...</p>;
+  if (!user) return <p className="text-center mt-12 text-sm text-slate-500">Loading profile…</p>;
 
   const details = [
-    { Icon: User, label: "Full Name", value: user.name || "-" },
-    { Icon: Mail, label: "Email", value: user.email || "-" },
-    { Icon: Phone, label: "Phone", value: user.phone || "-" },
-    {
-      Icon: MapPin,
-      label: "Usual Location",
-      value: user.usualLocation || "Chennai",
-    },
-    {
-      Icon: Calendar,
-      label: "Member Since",
-      value: formatDate(user.createdAt),
-    },
+    { Icon: User,     label: "Full Name",       value: user.name || "-" },
+    { Icon: Mail,     label: "Email",            value: user.email || "-" },
+    { Icon: Phone,    label: "Phone",            value: user.phone || "-" },
+    { Icon: MapPin,   label: "Usual Location",   value: user.usualLocation || "Not set yet" },
+    { Icon: Calendar, label: "Member Since",     value: formatDate(user.createdAt) },
   ];
 
   return (
     <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
-        .pf-root { font-family: 'DM Sans', sans-serif; max-width: 600px; color: #0f172a; padding-bottom: 60px; }
-        .pf-title { font-size: clamp(1.2rem, 2.5vw, 1.5rem); font-weight: 700; color: #0f172a; margin: 0 0 24px; }
-        .pf-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; margin-bottom: 16px; overflow: hidden; }
-        .pf-avatar-card { padding: 24px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
-        .pf-avatar { width: 60px; height: 60px; border-radius: 16px; background: linear-gradient(135deg, #2563eb, #1d4ed8); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; color: #fff; flex-shrink: 0; }
-        .pf-avatar-name { font-size: 16px; font-weight: 700; color: #0f172a; margin: 0 0 3px; }
-        .pf-avatar-email, .pf-avatar-phone { font-size: 13px; color: #64748b; margin: 0 0 2px; }
-        .pf-role-pill { margin-left: auto; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
-        .pf-role-admin { background: #eff6ff; color: #1d4ed8; }
-        .pf-role-user { background: #f0fdf4; color: #16a34a; }
-        .pf-balance-card { background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 60%, #3b82f6 100%); border-radius: 16px; padding: 24px; margin-bottom: 16px; color: #fff; position: relative; overflow: hidden; }
-        .pf-balance-card::after { content: ''; position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; border-radius: 50%; background: rgba(255,255,255,0.07); pointer-events: none; }
-        .pf-balance-label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.55); margin: 0 0 8px; }
-        .pf-balance-amount { font-family: 'DM Mono', monospace; font-size: clamp(1.8rem, 4vw, 2.4rem); font-weight: 500; margin: 0 0 18px; line-height: 1; }
-        .pf-acct-row { display: flex; align-items: center; gap: 10px; }
-        .pf-acct-num { font-family: 'DM Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.8); }
-        .pf-copy-btn { display: inline-flex; align-items: center; gap: 5px; padding: 4px 11px; border-radius: 7px; background: rgba(255,255,255,0.15); border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.9); transition: background 0.15s; }
-        .pf-copy-btn:hover { background: rgba(255,255,255,0.25); }
-        .pf-section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #94a3b8; padding: 16px 20px 0; margin: 0; }
-        .pf-detail-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 20px; border-bottom: 1px solid #f8fafc; }
-        .pf-detail-row:last-child { border-bottom: none; }
-        .pf-detail-left { display: flex; align-items: center; gap: 10px; }
-        .pf-detail-icon { color: #94a3b8; flex-shrink: 0; }
-        .pf-detail-label { font-size: 13px; color: #64748b; font-weight: 500; }
-        .pf-detail-val { font-size: 13px; color: #0f172a; font-weight: 600; text-align: right; }
-        .pf-logout-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 11px; border: 1.5px solid #fecaca; background: #fff; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; color: #dc2626; transition: background 0.15s, border-color 0.15s; }
-        .pf-logout-btn:hover { background: #fef2f2; border-color: #f87171; }
-        .pf-loading { text-align: center; margin-top: 50px; font-size: 14px; color: #64748b; }
-      `}</style>
+      <div className="max-w-xl pb-16 font-sans text-slate-900">
+        <h1 className="text-[clamp(1.2rem,2.5vw,1.5rem)] font-bold text-slate-900 m-0 mb-6">Profile</h1>
 
-      <div className="pf-root">
-        <h1 className="pf-title">Profile</h1>
-
-        {/* Avatar */}
+        {/* Avatar card */}
         <motion.div
-          className="pf-card"
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
+          className="bg-white border border-slate-200 rounded-2xl mb-4 overflow-hidden"
+          initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
         >
-          <div className="pf-avatar-card">
-            <div className="pf-avatar">
+          <div className="flex items-center gap-4 p-6 flex-wrap">
+            <div className="w-[60px] h-[60px] rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center text-[22px] font-bold text-white shrink-0">
               {user.name?.[0]?.toUpperCase() || "U"}
             </div>
-            <div>
-              <p className="pf-avatar-name">{user.name || "-"}</p>
-              <p className="pf-avatar-email">{user.email || "-"}</p>
-              <p className="pf-avatar-phone">{user.phone || "-"}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-[16px] font-bold text-slate-900 m-0 mb-0.5">{user.name || "-"}</p>
+              <p className="text-[13px] text-slate-500 m-0 mb-0.5">{user.email || "-"}</p>
+              <p className="text-[13px] text-slate-500 m-0">{user.phone || "-"}</p>
             </div>
-            <span
-              className={`pf-role-pill ${user.role === "admin" ? "pf-role-admin" : "pf-role-user"}`}
-            >
+            <span className={`shrink-0 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide
+              ${user.role === "admin" ? "bg-blue-50 text-blue-700" : "bg-green-50 text-green-700"}`}>
               {user.role || "user"}
             </span>
           </div>
         </motion.div>
 
-        {/* Balance */}
+        {/* Balance card */}
         <motion.div
-          className="pf-balance-card"
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
+          className="relative overflow-hidden rounded-2xl p-6 mb-4 text-white"
+          style={{ background: "linear-gradient(135deg,#1e3a8a 0%,#2563eb 60%,#3b82f6 100%)" }}
+          initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
         >
-          <p className="pf-balance-label">Available Balance</p>
-          <p className="pf-balance-amount">
+          <div className="absolute -top-12 -right-12 w-52 h-52 rounded-full bg-white/[0.07] pointer-events-none" />
+          <p className="text-[10px] tracking-[0.1em] uppercase text-white/55 m-0 mb-2">Available Balance</p>
+          <p className="font-mono text-[clamp(1.8rem,4vw,2.4rem)] font-medium m-0 mb-5 leading-none">
             {formatCurrency(user.balance || 0)}
           </p>
-          <div className="pf-acct-row">
+          <div className="flex items-center gap-2.5">
             <CreditCard size={14} color="rgba(255,255,255,0.5)" />
-            <span className="pf-acct-num">
-              {user.accountNumber || "XXXX-XXXX"}
+            <span className="font-mono text-[13px] text-white/80 tracking-wide">
+              {maskAccountUI(user.accountNumber)}
             </span>
-            <button className="pf-copy-btn" onClick={copyAccount}>
-              {copied ? (
-                <>
-                  <Check size={12} />
-                  Copied
-                </>
-              ) : (
-                <>
-                  <Copy size={12} />
-                  Copy
-                </>
-              )}
+            <button
+              onClick={copyAccount}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/15 hover:bg-white/25 border-none cursor-pointer text-[12px] font-semibold text-white/90 transition-colors"
+            >
+              {copied ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
             </button>
           </div>
         </motion.div>
 
         {/* Details */}
         <motion.div
-          className="pf-card"
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+          className="bg-white border border-slate-200 rounded-2xl mb-4 overflow-hidden"
+          initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
         >
-          <p className="pf-section-title">Account Details</p>
+          <p className="text-[12px] font-bold uppercase tracking-[0.07em] text-slate-400 px-5 pt-4 m-0">
+            Account Details
+          </p>
           {details.map(({ Icon, label, value }) => (
-            <div key={label} className="pf-detail-row">
-              <div className="pf-detail-left">
-                <Icon size={15} className="pf-detail-icon" strokeWidth={2} />
-                <span className="pf-detail-label">{label}</span>
+            <div key={label} className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-slate-50 last:border-0">
+              <div className="flex items-center gap-2.5">
+                <Icon size={15} className="text-slate-400 shrink-0" strokeWidth={2} />
+                <span className="text-[13px] text-slate-500 font-medium">{label}</span>
               </div>
-              <span className="pf-detail-val">{value}</span>
+              <span className="text-[13px] text-slate-900 font-semibold text-right break-all">{value}</span>
             </div>
           ))}
         </motion.div>
 
-        {/* Sign out */}
-        <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-        >
+        {/* Sign out button */}
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
           <button
-            className="pf-logout-btn"
-            onClick={() => {
-              logout();
-              window.location.href = "/login";
-            }}
+            onClick={() => setShowLogout(true)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-[1.5px] border-red-200 bg-white hover:bg-red-50 hover:border-red-300 text-red-600 text-[14px] font-semibold cursor-pointer transition-colors"
           >
             <LogOut size={15} strokeWidth={2} />
-            Sign out of FraudShield
+            Sign out of BankGuard
           </button>
         </motion.div>
       </div>
+
+      {/* Logout confirmation modal */}
+      <AnimatePresence>
+        {showLogout && (
+          <motion.div
+            className="fixed inset-0 z-[1000] flex items-center justify-center p-5 bg-slate-900/45 backdrop-blur-sm"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setShowLogout(false)}
+          >
+            <motion.div
+              className="bg-white rounded-[20px] p-8 max-w-sm w-full text-center shadow-2xl"
+              initial={{ opacity: 0, scale: 0.88, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.88, y: 20 }}
+              transition={{ type: "spring", stiffness: 320, damping: 26 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-[60px] h-[60px] rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle size={26} color="#dc2626" strokeWidth={2} />
+              </div>
+              <h2 className="text-[18px] font-bold text-slate-900 m-0 mb-2">Sign out?</h2>
+              <p className="text-[14px] text-slate-500 m-0 mb-6 leading-relaxed">
+                You'll be redirected to the login page. Note your account details before leaving.
+              </p>
+              <div className="flex gap-2.5">
+                <button
+                  onClick={() => setShowLogout(false)}
+                  className="flex-1 py-3 rounded-xl border-[1.5px] border-slate-200 bg-white hover:bg-slate-50 text-slate-500 text-[14px] font-semibold cursor-pointer transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => { logout(); window.location.href = "/login"; }}
+                  className="flex-1 py-3 rounded-xl border-none bg-red-600 hover:bg-red-700 text-white text-[14px] font-semibold cursor-pointer transition-colors"
+                >
+                  Sign out
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }
