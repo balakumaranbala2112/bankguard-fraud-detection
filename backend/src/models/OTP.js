@@ -29,6 +29,14 @@ const otpSchema = new mongoose.Schema(
       ref: "Transaction",
     },
 
+    // Fix 15: Explicit type field replaces brittle $exists transactionId checks
+    type: {
+      type: String,
+      enum: ["LOGIN", "TRANSACTION"],
+      required: true,
+      default: "TRANSACTION",
+    },
+
     // OTP status
     isUsed: {
       type: Boolean,
@@ -53,6 +61,9 @@ const otpSchema = new mongoose.Schema(
 // Auto expire OTP after 5 minutes using MongoDB TTL index
 // --------------------------------------------------------
 otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+// Fix 15: Performance indexes
+otpSchema.index({ userId: 1, type: 1, isUsed: 1 });
+otpSchema.index({ transactionId: 1 });
 
 // --------------------------------------------------------
 // Method to check if OTP is valid

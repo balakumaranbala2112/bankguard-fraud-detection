@@ -1,30 +1,43 @@
 // ── Currency ──────────────────────────────────────────
-export const formatCurrency = (amount, currency = "INR") =>
-  new Intl.NumberFormat("en-IN", {
+export const formatCurrency = (amount, currency = "INR") => {
+  const val = Number(amount);
+  if (amount === null || amount === undefined || isNaN(val)) return "₹0.00";
+  return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency,
     maximumFractionDigits: 2,
-  }).format(amount);
+  }).format(val);
+};
 
 // ── Date ──────────────────────────────────────────────
-export const formatDate = (date) =>
-  new Intl.DateTimeFormat("en-IN", {
+export const formatDate = (date) => {
+  if (!date) return "—";
+  const d = new Date(date);
+  if (isNaN(d)) return "—";
+  return new Intl.DateTimeFormat("en-IN", {
     day: "2-digit",
     month: "short",
     year: "numeric",
-  }).format(new Date(date));
+  }).format(d);
+};
 
-export const formatDateTime = (date) =>
-  new Intl.DateTimeFormat("en-IN", {
+export const formatDateTime = (date) => {
+  if (!date) return "—";
+  const d = new Date(date);
+  if (isNaN(d)) return "—";
+  return new Intl.DateTimeFormat("en-IN", {
     day: "2-digit",
     month: "short",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(new Date(date));
+  }).format(d);
+};
 
 export const timeAgo = (date) => {
+  if (!date) return "—";
   const diff = Date.now() - new Date(date).getTime();
+  if (isNaN(diff)) return "—";
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return "Just now";
   if (mins < 60) return `${mins}m ago`;

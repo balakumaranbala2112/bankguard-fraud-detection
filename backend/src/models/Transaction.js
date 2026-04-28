@@ -31,6 +31,8 @@ const transactionSchema = new mongoose.Schema(
         "FLAGGED",
         "BLOCKED",
         "OTP_PENDING",
+        "PIN_PENDING",
+        "PROCESSING",
         "FAILED",
         "PENDING",
         "TOPUP_REQUIRED",
@@ -110,8 +112,22 @@ const transactionSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+
+    // FEATURE 23: Transaction category
+    category: {
+      type: String,
+      enum: ["FOOD", "RENT", "TRANSFER", "SHOPPING", "UTILITIES", "EDUCATION", "MEDICAL", "OTHER"],
+      default: "TRANSFER",
+    },
   },
   { timestamps: true },
 );
+
+// Fix 16: Performance indexes — prevent full collection scans
+transactionSchema.index({ sender: 1, createdAt: -1 });
+transactionSchema.index({ receiver: 1, createdAt: -1 });
+transactionSchema.index({ status: 1 });
+transactionSchema.index({ sender: 1, status: 1 });
+transactionSchema.index({ receiver: 1, status: 1 });
 
 module.exports = mongoose.model("Transaction", transactionSchema);

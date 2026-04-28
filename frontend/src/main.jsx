@@ -5,6 +5,16 @@ import { Toaster } from 'react-hot-toast'
 import App from './app/App.jsx'
 import './styles/index.css'
 
+// FEATURE 7: Register service worker for push notifications
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/sw.js')
+      .then(() => console.info('[SW] Registered'))
+      .catch((err) => console.info('[SW] Registration failed:', err.message))
+  })
+}
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
@@ -14,7 +24,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         toastOptions={{
           duration: 4000,
           style: {
-            fontFamily: 'DM Sans, sans-serif',
+            fontFamily: 'Inter, sans-serif',
             fontSize: '14px',
             borderRadius: '12px',
             border: '1px solid #e4ebfd',

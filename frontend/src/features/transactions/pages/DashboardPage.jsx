@@ -267,23 +267,30 @@ export default function DashboardPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.24 + i * 0.04 }}
-                className="flex items-center gap-3 px-5 py-3 border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors"
+                className="flex items-start sm:items-center gap-3.5 px-4 sm:px-5 py-3.5 border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors"
               >
-                <div className="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0" style={{ background: dotBg }}>
-                  <DirIcon size={16} color={dotColor} strokeWidth={2.5} />
+                <div className="w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0 mt-0.5 sm:mt-0" style={{ background: dotBg }}>
+                  <DirIcon size={18} color={dotColor} strokeWidth={2.5} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-medium text-slate-800 m-0 truncate">
-                    {dir}: {other?.name || other?.accountNumber || "—"}
-                  </p>
-                  <p className="text-[11px] text-slate-400 mt-0.5 m-0">{formatDateTime(txn.createdAt)}</p>
-                </div>
-                {txn.riskLevel && <RiskBadge level={txn.riskLevel} />}
-                <div className="text-right shrink-0 flex flex-col items-end gap-1.5">
-                  <p className="font-mono text-[13px] font-semibold text-slate-900 m-0">{formatCurrency(txn.amount)}</p>
-                  <span className={`text-[10px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-full ${tagCls}`}>
-                    {txn.status}
-                  </span>
+                  <div className="flex items-center justify-between gap-3 mb-1">
+                    <p className="text-[14px] font-semibold text-slate-900 m-0 truncate">
+                      {other?.name || other?.accountNumber || "Unknown"}
+                    </p>
+                    <p className="font-mono text-[14px] font-bold text-slate-900 m-0 shrink-0">
+                      {formatCurrency(txn.amount)}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <p className="text-[12px] text-slate-500 m-0 truncate">
+                      {dir} • {formatDateTime(txn.createdAt)}
+                    </p>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className={`text-[10px] font-bold tracking-[0.06em] uppercase px-2 py-0.5 rounded-full ${tagCls}`}>
+                        {txn.status.replace("_", " ")}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             );
@@ -308,17 +315,17 @@ export default function DashboardPage() {
           {alerts.slice(0, 3).map((alert) => {
             const isHigh = (alert.severity || alert.riskLevel) === "HIGH";
             return (
-              <div key={alert._id} className="flex gap-3 px-5 py-3.5 border-b border-slate-50 last:border-0">
-                <div className={`w-[34px] h-[34px] rounded-[9px] flex items-center justify-center shrink-0 mt-0.5 ${isHigh ? "bg-red-50" : "bg-amber-50"}`}>
+              <div key={alert._id} className="flex gap-3 px-4 sm:px-5 py-4 border-b border-slate-50 last:border-0">
+                <div className={`w-[36px] h-[36px] rounded-[10px] flex items-center justify-center shrink-0 mt-0.5 ${isHigh ? "bg-red-50" : "bg-amber-50"}`}>
                   {isHigh
-                    ? <AlertTriangle size={16} color="#dc2626" strokeWidth={2} />
-                    : <Info          size={16} color="#d97706" strokeWidth={2} />}
+                    ? <AlertTriangle size={18} color="#dc2626" strokeWidth={2} />
+                    : <Info          size={18} color="#d97706" strokeWidth={2} />}
                 </div>
-                <div>
-                  <p className="text-[13px] font-semibold text-slate-800 m-0 mb-0.5">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[14px] font-semibold text-slate-800 m-0 mb-1 truncate">
                     {alert.attackType || alert.type || "Fraud Alert"}
                   </p>
-                  <p className="text-[12px] text-slate-500 m-0 leading-relaxed">
+                  <p className="text-[12px] text-slate-500 m-0 leading-relaxed break-words">
                     {alert.message || alert.description}
                   </p>
                 </div>

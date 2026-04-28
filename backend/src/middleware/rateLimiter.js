@@ -5,8 +5,8 @@ const logger = require("../utils/logger");
 // General API rate limiter
 // --------------------------------------------------------
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // max 100 requests per 15 mins
+  windowMs: parseInt(process.env.RATE_LIMIT_API_WINDOW_MS,  10) || 15 * 60 * 1000,
+  max:      parseInt(process.env.RATE_LIMIT_API_MAX,         10) || 200,
   message: {
     success: false,
     error: "Too many requests — please try again after 15 minutes",
@@ -23,8 +23,8 @@ const apiLimiter = rateLimit({
 // Strict limiter for auth routes
 // --------------------------------------------------------
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // max 10 login attempts per 15 mins
+  windowMs: parseInt(process.env.RATE_LIMIT_AUTH_WINDOW_MS, 10) || 15 * 60 * 1000,
+  max:      parseInt(process.env.RATE_LIMIT_AUTH_MAX,        10) || 20,
   message: {
     success: false,
     error: "Too many login attempts — please try again after 15 minutes",
@@ -41,8 +41,8 @@ const authLimiter = rateLimit({
 // Strict limiter for transaction routes
 // --------------------------------------------------------
 const transactionLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 10, // max 10 transactions per minute
+  windowMs: parseInt(process.env.RATE_LIMIT_TXN_WINDOW_MS,  10) || 60 * 1000,
+  max:      parseInt(process.env.RATE_LIMIT_TXN_MAX,         10) || 30,
   message: {
     success: false,
     error: "Too many transactions — please slow down",

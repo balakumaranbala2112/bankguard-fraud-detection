@@ -10,6 +10,15 @@ os.environ["PYTHONWARNINGS"] = "ignore"
 app = Flask(__name__)
 CORS(app)
 
+# Fix 20: shared-secret API key auth guard
+ML_API_KEY = os.environ.get("ML_API_KEY", "")
+
+def _check_api_key():
+    """Return a 401 Response if ML_API_KEY is configured and not matched."""
+    if ML_API_KEY and request.headers.get("X-ML-API-Key") != ML_API_KEY:
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+    return None
+
 BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR = os.path.join(BASE_DIR, '..', 'models')
 
@@ -55,6 +64,55 @@ def get_attack_type(data, prob):
         return 'NEW_BENEFICIARY_FRAUD'
     return 'PATTERN_ANOMALY'
 
+# ── Human-readable reason builder ──────────────────────────────────────────
+FEATURE_LABELS = {
+    'amount':                  ('amount',              'your transaction amount'),
+    'amount_to_avg_ratio':     ('amount_to_avg_ratio', 'your average transaction amount'),
+    'amount_to_max_ratio':     ('amount_to_max_ratio', 'your maximum transaction amount'),
+    'amount_to_balance_ratio': ('amount_to_balance_ratio', 'your account balance'),
+    'velocity_2min':           ('velocity_2min',       'transactions in the last 2 minutes'),
+    'velocity_1hr':            ('velocity_1hr',        'transactions in the last hour'),
+    'is_known_beneficiary':    ('is_known_beneficiary','recipient familiarity'),
+    'is_new_location':         ('is_new_location',     'transaction location'),
+    'transaction_hour':        ('transaction_hour',    'time of transaction'),
+    'days_since_last_txn':     ('days_since_last_txn', 'days since last transaction'),
+    'balance_drain':           ('balance_drain',       'balance drain level'),
+    'exceeds_balance':         ('exceeds_balance',     'balance limit'),
+}
+
+def make_reason(feature, shap_val, input_dict):
+    val = input_dict.get(feature, 0)
+    direction = "raised" if shap_val > 0 else "lowered"
+
+    if feature == 'amount_to_avg_ratio':
+        ratio = round(val, 1)
+        return f"Amount is {ratio}x your usual average — unusual spending spike"
+    if feature == 'amount_to_max_ratio':
+        ratio = round(val, 1)
+        return f"Amount is {ratio}x your historical maximum transaction"
+    if feature == 'amount_to_balance_ratio':
+        pct = round(val * 100, 1)
+        return f"This transaction is {pct}% of your total balance"
+    if feature == 'velocity_2min':
+        return f"{int(val)} transactions detected in the last 2 minutes — rapid succession pattern"
+    if feature == 'velocity_1hr':
+        return f"{int(val)} transactions in the past hour — above normal frequency"
+    if feature == 'is_known_beneficiary':
+        return "Recipient is not in your known contacts list"
+    if feature == 'is_new_location':
+        return "Transaction originated from an unfamiliar location"
+    if feature == 'transaction_hour':
+        return f"Transaction at hour {int(val)} — outside your usual activity window"
+    if feature == 'days_since_last_txn':
+        return f"{int(val)} days since your last transaction — unusual account activity"
+    if feature == 'balance_drain':
+        return "This transaction would drain a significant portion of your balance"
+    if feature == 'exceeds_balance':
+        return "Transaction amount exceeds available balance"
+    if feature == 'amount':
+        return f"Transaction amount of ₹{int(val):,} is significantly above your norm"
+    return f"{FEATURE_LABELS.get(feature, (feature,))[0]} {direction} the risk score"
+
 # ── Health check ───────────────────────────────────────────────────────────
 @app.route('/health', methods=['GET'])
 def health():
@@ -67,6 +125,9 @@ def health():
 # ── Predict ────────────────────────────────────────────────────────────────
 @app.route('/predict', methods=['POST'])
 def predict():
+    auth_err = _check_api_key()  # Fix 20
+    if auth_err:
+        return auth_err
     if not model:
         return jsonify({'success': False, 'error': 'Model not loaded'}), 503
 
@@ -130,8 +191,99 @@ def predict():
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
+# ── FEATURE 1: SHAP Explainability ────────────────────────────────────────
+@app.route('/explain', methods=['POST'])
+def explain():
+    auth_err = _check_api_key()  # Fix 20
+    if auth_err:
+        return auth_err
+    if not model:
+        return jsonify({'success': False, 'error': 'Model not loaded'}), 503
+
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'No data received'}), 400
+
+        input_dict = {
+            'amount':                  float(data.get('amount', 0)),
+            'amount_to_avg_ratio':     float(data.get('amount_to_avg_ratio', 1.0)),
+            'amount_to_max_ratio':     float(data.get('amount_to_max_ratio', 1.0)),
+            'amount_to_balance_ratio': float(data.get('amount_to_balance_ratio', 0.5)),
+            'velocity_2min':           float(data.get('velocity_2min', 0)),
+            'velocity_1hr':            float(data.get('velocity_1hr', 0)),
+            'is_known_beneficiary':    float(data.get('is_known_beneficiary', 1)),
+            'is_new_location':         float(data.get('is_new_location', 0)),
+            'transaction_hour':        float(data.get('transaction_hour', 12)),
+            'days_since_last_txn':     float(data.get('days_since_last_txn', 0)),
+            'balance_drain':           float(data.get('balance_drain', 0)),
+            'exceeds_balance':         float(data.get('exceeds_balance', 0)),
+        }
+
+        input_df     = pd.DataFrame([input_dict])[feature_names]
+        input_scaled = scaler.transform(input_df)
+
+        # Try SHAP first, fall back to feature importance
+        explanations = []
+        try:
+            import shap
+            explainer   = shap.TreeExplainer(model)
+            shap_values = explainer.shap_values(input_scaled)
+
+            # For binary classifiers shap_values may be list[2] or ndarray
+            if isinstance(shap_values, list):
+                sv = shap_values[1][0]
+            else:
+                sv = shap_values[0]
+
+            # Pair features with shap values, sort by |impact|
+            pairs = list(zip(feature_names, sv, input_df.iloc[0].values))
+            pairs.sort(key=lambda x: abs(x[1]), reverse=True)
+
+            for feat, shap_val, raw_val in pairs[:3]:
+                if abs(shap_val) < 0.001:
+                    continue
+                reason = make_reason(feat, shap_val, input_dict)
+                explanations.append({
+                    'feature':   feat,
+                    'impact':    round(float(shap_val), 4),
+                    'direction': 'increased_risk' if shap_val > 0 else 'decreased_risk',
+                    'reason':    reason,
+                })
+
+        except ImportError:
+            # SHAP not installed — use feature importances from the model
+            importances = model.feature_importances_
+            pairs = list(zip(feature_names, importances, input_df.iloc[0].values))
+            pairs.sort(key=lambda x: x[1], reverse=True)
+            for feat, imp, raw_val in pairs[:3]:
+                reason = make_reason(feat, imp, input_dict)
+                explanations.append({
+                    'feature':   feat,
+                    'impact':    round(float(imp), 4),
+                    'direction': 'increased_risk',
+                    'reason':    reason,
+                })
+
+        # Ensure we always return at least 1 explanation
+        if not explanations:
+            explanations = [{
+                'feature':   'pattern',
+                'impact':    0,
+                'direction': 'increased_risk',
+                'reason':    'Multiple behavioral signals contributed to the risk score',
+            }]
+
+        return jsonify({'success': True, 'explanations': explanations[:3]})
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 if __name__ == '__main__':
     print("\nStarting BankGuard ML API — Behavioral XGBoost")
     print("  Health  : http://localhost:5000/health")
-    print("  Predict : http://localhost:5000/predict\n")
+    print("  Predict : http://localhost:5000/predict")
+    print("  Explain : http://localhost:5000/explain\n")
     app.run(debug=True, host='0.0.0.0', port=5000)

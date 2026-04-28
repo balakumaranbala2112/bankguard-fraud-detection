@@ -21,8 +21,14 @@
     "express-rate-limit": "^8.3.2",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.4.1",
+    "node-cron": "^4.2.1",
+    "nodemailer": "^8.0.5",
+    "pdfkit": "^0.18.0",
+    "qrcode": "^1.5.4",
     "razorpay": "^2.9.6",
+    "socket.io": "^4.8.3",
     "twilio": "^5.13.1",
+    "web-push": "^3.6.7",
     "winston": "^3.19.0"
   },
   "devDependencies": {

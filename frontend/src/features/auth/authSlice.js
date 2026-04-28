@@ -24,6 +24,7 @@ export const useAuthStore = create((set, get) => ({
       const { token, user } = res.data;
       localStorage.setItem("fs_token", token);
       localStorage.setItem("fs_user", JSON.stringify(user));
+      localStorage.setItem("bg_last_phone", user.phone);
       set({ token, user, loading: false });
       return { success: true };
     } catch (err) {
@@ -34,7 +35,7 @@ export const useAuthStore = create((set, get) => ({
   },
 
   // ── Login ─────────────────────────────────────────
-  login: async (email, password) => {
+  login: async (phone, pin) => {
     const existing = localStorage.getItem("fs_token");
     if (existing) {
       localStorage.removeItem("fs_token");
@@ -42,14 +43,42 @@ export const useAuthStore = create((set, get) => ({
     }
     set({ loading: true, error: null });
     try {
-      const res = await api.post(ENDPOINTS.LOGIN, { email, password });
+      const res = await api.post(ENDPOINTS.LOGIN, { phone, pin });
+      // FEATURE 10: 2FA — backend returns requires2FA instead of token on new device
+      if (res.data.requires2FA) {
+        set({ loading: false });
+        return { success: true, requires2FA: true, userId: res.data.userId };
+      }
       const { token, user } = res.data;
       localStorage.setItem("fs_token", token);
       localStorage.setItem("fs_user", JSON.stringify(user));
+      localStorage.setItem("bg_last_phone", user.phone);
       set({ token, user, loading: false });
       return { success: true };
     } catch (err) {
       const error = err.response?.data?.error || "Login failed";
+      set({ loading: false, error });
+      return { success: false, error };
+    }
+  },
+
+  // ── FEATURE 10: 2FA verify OTP then complete login ────────────
+  verifyLoginOtp: async (userId, otp) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await api.post(ENDPOINTS.VERIFY_LOGIN_OTP, {
+        userId,
+        otp,
+        userAgent: navigator.userAgent,
+      });
+      const { token, user } = res.data;
+      localStorage.setItem("fs_token", token);
+      localStorage.setItem("fs_user", JSON.stringify(user));
+      localStorage.setItem("bg_last_phone", user.phone);
+      set({ token, user, loading: false });
+      return { success: true };
+    } catch (err) {
+      const error = err.response?.data?.error || "OTP verification failed";
       set({ loading: false, error });
       return { success: false, error };
     }

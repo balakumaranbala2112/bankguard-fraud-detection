@@ -9,7 +9,7 @@ export default function ProtectedRoute({ adminOnly = false }) {
   if (adminOnly && !isAdmin) return <Navigate to="/dashboard" replace />
 
   return (
-    <div className="flex min-h-screen bg-slate-100">
+    <div className="flex min-h-screen bg-slate-100 transition-colors duration-200">
       <Sidebar />
       {/* Mobile: top padding for the fixed top bar (h-14). Desktop: left margin for fixed sidebar (w-60). */}
       <main className="flex-1 pt-14 md:pt-0 md:ml-60 min-h-screen">

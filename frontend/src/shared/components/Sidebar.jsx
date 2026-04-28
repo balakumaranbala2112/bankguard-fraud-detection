@@ -13,13 +13,17 @@ import {
   Star,
   Menu,
   X,
+  PieChart,
+  BookUser,
 } from "lucide-react";
 
 const NAV = [
   { icon: LayoutDashboard, label: "Dashboard", to: "/dashboard" },
   { icon: SendHorizontal,  label: "Send Money", to: "/send" },
   { icon: ClockArrowUp,   label: "History",    to: "/history" },
+  { icon: BookUser,       label: "Contacts",   to: "/contacts" },
   { icon: TriangleAlert,  label: "Alerts",     to: "/alerts" },
+  { icon: PieChart,       label: "Analytics",  to: "/analytics" },
   { icon: UserRound,      label: "Profile",    to: "/profile" },
 ];
 
@@ -51,13 +55,15 @@ function SidebarContent({ user, navItems, onNav, onLogout }) {
   return (
     <div className="flex flex-col h-full font-sans">
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-5 py-5 border-b border-white/[0.06]">
-        <div className="w-[34px] h-[34px] rounded-[9px] bg-blue-600 flex items-center justify-center shrink-0">
-          <ShieldCheck size={18} color="#fff" strokeWidth={2} />
-        </div>
-        <div>
-          <p className="text-[14px] font-bold text-slate-100 m-0 leading-tight">BankGuard</p>
-          <p className="text-[11px] text-slate-500 m-0">Banking Platform</p>
+      <div className="flex items-center gap-2.5 px-5 py-5 border-b border-white/[0.06] justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-[34px] h-[34px] rounded-[9px] bg-blue-600 flex items-center justify-center shrink-0">
+            <ShieldCheck size={18} color="#fff" strokeWidth={2} />
+          </div>
+          <div>
+            <p className="text-[14px] font-bold text-slate-100 m-0 leading-tight">BankGuard</p>
+            <p className="text-[11px] text-slate-500 m-0">Banking Platform</p>
+          </div>
         </div>
       </div>
 
@@ -150,14 +156,16 @@ export default function Sidebar() {
         className={`md:hidden fixed top-0 left-0 h-full z-50 w-72 bg-slate-950 border-r border-white/[0.06] transition-transform duration-300 ease-out
           ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
-        {/* Close button */}
-        <button
-          onClick={() => setMobileOpen(false)}
-          className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-white/10 hover:text-white border-none bg-transparent cursor-pointer"
-          aria-label="Close menu"
-        >
-          <X size={17} />
-        </button>
+        <div className="absolute top-3 right-3">
+          {/* Close button */}
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-white/10 hover:text-white border-none bg-transparent cursor-pointer"
+            aria-label="Close menu"
+          >
+            <X size={17} />
+          </button>
+        </div>
         <SidebarContent
           user={user}
           navItems={navItems}
@@ -166,7 +174,6 @@ export default function Sidebar() {
         />
       </aside>
 
-      {/* ── Desktop fixed sidebar ── */}
       <aside className="hidden md:flex fixed top-0 left-0 h-full w-60 flex-col bg-slate-950 border-r border-white/[0.06] z-40">
         <SidebarContent
           user={user}

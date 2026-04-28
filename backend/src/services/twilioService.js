@@ -19,6 +19,7 @@ const twilioService = {
         otp,
         transactionId,
         expiresAt,
+        type: "TRANSACTION", // Fix 15
       });
 
       await client.messages.create({
@@ -129,6 +130,17 @@ const twilioService = {
     } catch (error) {
       // SMS failure MUST never block the transaction or OTP flow
       logger.warn(`⚠️ Fraud alert SMS failed (non-fatal): ${error.message}`);
+      return { success: false, error: error.message };
+    }
+  },
+  // Fix 11: Generic SMS helper — used by authController.sendLoginOtp
+  async sendSMS(to, body) {
+    try {
+      await client.messages.create({ body, from: twilioPhone, to });
+      logger.info(`✅ SMS sent to ${to}`);
+      return { success: true };
+    } catch (error) {
+      logger.warn(`⚠️ SMS send failed (non-fatal): ${error.message}`);
       return { success: false, error: error.message };
     }
   },

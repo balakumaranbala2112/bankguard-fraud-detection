@@ -1,82 +1,97 @@
 // ── API Endpoints ─────────────────────────────────────
 export const API_BASE =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:4000/api";
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:4000/api/v1";
 
 export const ENDPOINTS = {
   // Auth
   REGISTER: "/auth/register",
-  LOGIN: "/auth/login",
-  PROFILE: "/auth/profile",
+  LOGIN:    "/auth/login",
+  PROFILE:  "/auth/profile",
+  SET_PIN:  "/auth/pin",          // F19
+  SESSIONS: "/auth/sessions",         // F20
+
+  // FEATURE 10: 2FA Login
+  SEND_LOGIN_OTP:   "/auth/send-login-otp",
+  VERIFY_LOGIN_OTP: "/auth/verify-login-otp",
+
+  // FEATURE 7: Push notifications
+  PUSH_SUBSCRIBE: "/auth/push-subscribe",
 
   // Transactions
-  SEND_MONEY: "/transactions/send",
-  VERIFY_OTP: "/transactions/verify-otp",
-  VERIFY_PAYMENT: "/transactions/verify-payment",
-  HISTORY: "/transactions/history",
-  RECENT_RECIPIENTS: "/transactions/recent-recipients",
+  SEND_MONEY:        "/transactions",
+  CONFIRM_TXN:       "/transactions",      // + /:id/confirm
+  VERIFY_OTP:        "/transactions/verify-otp",
+  VERIFY_PAYMENT:    "/transactions",      // + /:id/verify
+  HISTORY:           "/transactions",
+  RECENT_RECIPIENTS: "/transactions/recipients",
+  RECEIPT:           "/transactions",      // + /:id/receipt
+  QR_CODE:           "/transactions/qr",   // F21 + /:accountNumber
 
   // Alerts
-  // FIX: was '/transactions/alerts' — but alertRoutes.js is mounted at
-  // /api/alerts in app.js, not under /transactions. Using the wrong path
-  // caused the Alerts page to 404 on every load.
-  ALERTS: "/alerts",
-  ALERTS_UNREAD: "/alerts/unread-count", // bonus: added for unread badge support
-  ALERT_READ: "/alerts", // PUT /alerts/:id/read — append /:id/read in the call
+  ALERTS:        "/alerts",
+  ALERTS_UNREAD: "/alerts/unread-count",
+  ALERT_READ:    "/alerts",  // PUT /alerts/:id/read
 
   // Admin
-  ADMIN_STATS: "/admin/stats",
-  ADMIN_USERS: "/admin/users",
+  ADMIN_STATS:        "/admin/stats",
+  ADMIN_USERS:        "/admin/users",
   ADMIN_TRANSACTIONS: "/admin/transactions",
+  ADMIN_RETRAIN:      "/admin/retrain",       // F4
+  ADMIN_APPEALS:      "/admin/appeals",       // F5
+  ADMIN_AUDIT_LOGS:   "/admin/audit-logs",    // F9
+  ADMIN_REPORTS:      "/admin/reports/monthly", // F13
 
-  // FIX: RETRAIN and PREDICTIONS were pointing to routes that don't exist
-  // in adminRoutes.js. Removed to avoid silent 404s.
-  // Add them back once you implement those backend endpoints.
+  // FEATURE 1: SHAP Explain
+  ML_EXPLAIN: "/ml/explain",
+
+  // FEATURE 5: Appeals (user)
+  APPEALS: "/appeals",
+
+  // FEATURE 22: Contacts
+  CONTACTS: "/contacts",
 };
+
 
 // ── Risk Levels ───────────────────────────────────────
 export const RISK = {
-  LOW: "LOW",
+  LOW:    "LOW",
   MEDIUM: "MEDIUM",
-  HIGH: "HIGH",
+  HIGH:   "HIGH",
 };
 
 export const RISK_LABELS = {
-  LOW: "Safe",
+  LOW:    "Safe",
   MEDIUM: "Requires Verification",
-  HIGH: "Blocked — High Risk",
+  HIGH:   "Blocked — High Risk",
 };
 
 export const RISK_COLORS = {
-  LOW: "success",
+  LOW:    "success",
   MEDIUM: "warn",
-  HIGH: "danger",
+  HIGH:   "danger",
 };
 
 // ── Attack Types ──────────────────────────────────────
-// FIX: synced with the actual values the backend/ML model returns.
-// The old keys (CARD_FRAUD, PHISHING, etc.) don't match anything
-// the backend sends — so attack type labels never displayed correctly.
 export const ATTACK_TYPES = {
-  NONE: "None",
-  LARGE_AMOUNT_FRAUD: "Large Amount Fraud",
-  ACCOUNT_TAKEOVER: "Account Takeover",
+  NONE:                   "None",
+  LARGE_AMOUNT_FRAUD:     "Large Amount Fraud",
+  ACCOUNT_TAKEOVER:       "Account Takeover",
   RAPID_SUCCESSION_FRAUD: "Rapid Succession Fraud",
-  ODD_HOUR_FRAUD: "Odd Hour Fraud",
-  NEW_BENEFICIARY_FRAUD: "New Beneficiary Fraud",
-  PATTERN_ANOMALY: "Pattern Anomaly",
+  ODD_HOUR_FRAUD:         "Odd Hour Fraud",
+  NEW_BENEFICIARY_FRAUD:  "New Beneficiary Fraud",
+  PATTERN_ANOMALY:        "Pattern Anomaly",
 };
 
 // ── Transaction Status ────────────────────────────────
-// FIX: backend only uses APPROVED, FLAGGED, BLOCKED — never PENDING or FAILED.
-// Added FLAGGED so status labels render correctly in transaction history.
 export const TXN_STATUS = {
   APPROVED: "APPROVED",
-  FLAGGED: "OTP_PENDING",
-  BLOCKED: "BLOCKED",
+  FLAGGED:  "OTP_PENDING",
+  BLOCKED:  "BLOCKED",
 };
 
 export const TXN_STATUS_LABEL = {
-  APPROVED: "Approved",
-  FLAGGED: "Pending OTP",
-  BLOCKED: "Blocked",
+  APPROVED:    "Approved",
+  FLAGGED:     "Pending OTP",
+  BLOCKED:     "Blocked",
+  OTP_PENDING: "Pending OTP",
 };

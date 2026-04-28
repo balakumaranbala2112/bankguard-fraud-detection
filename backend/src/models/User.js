@@ -11,16 +11,16 @@ const userSchema = new mongoose.Schema(
 
     email: {
       type: String,
-      required: true,
-      unique: true,
+      sparse: true,
       lowercase: true,
       trim: true,
+      match: [/\S+@\S+\.\S+/, "Invalid email format"],
     },
 
-    password: {
+    // Login PIN — hashed by pre-save hook; validated (4 digits) in controller BEFORE hashing
+    pin: {
       type: String,
       required: true,
-      minlength: 6,
       select: false,
     },
 
@@ -32,11 +32,13 @@ const userSchema = new mongoose.Schema(
         validator: (v) => /^\+[1-9]\d{9,14}$/.test(v),
         message: "Invalid phone format — use +91XXXXXXXXXX",
       },
+      index: true
     },
 
     accountNumber: {
       type: String,
       unique: true,
+      index: true
     },
 
     balance: {
@@ -56,11 +58,6 @@ const userSchema = new mongoose.Schema(
       default: true,
     },
 
-    // ── Pattern fields — define each user's normal behavior ──
-    // NOTE: these start as null/0 for new users and are populated
-    // automatically by learnUserPatterns() as they transact.
-    // We deliberately do NOT set fake defaults (like "Chennai") because
-    // a hardcoded city would incorrectly flag every real city as "new location".
     usualLocation: {
       type: String,
       default: null,   // null = not yet learned; bootstrapped on first transaction
@@ -95,7 +92,32 @@ const userSchema = new mongoose.Schema(
     knownBeneficiaries: {
       type: [String],
       default: [],
+      validate: [arr => arr.length <= 50, "Too many beneficiaries"],
     },
+
+    // FEATURE 7: Push notification subscription
+    pushSubscription: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
+
+    // FEATURE 10: Known device fingerprints for 2FA
+    knownDevices: {
+      type: [String],
+      default: [],
+    },
+
+    // FEATURE 18: Login attempt lockout
+    loginAttempts: { type: Number, default: 0 },
+    lockUntil:     { type: Date,   default: null },
+
+    // FEATURE 19: Transaction PIN (hashed, optional)
+    transactionPin:    { type: String, select: false, default: null },
+    hasTransactionPin: { type: Boolean, default: false },
+
+    // FEATURE 25: Daily / weekly transaction limits (INR)
+    dailyLimit:  { type: Number, default: 100000 },
+    weeklyLimit: { type: Number, default: 500000 },
   },
   { timestamps: true },
 );
@@ -105,19 +127,24 @@ const userSchema = new mongoose.Schema(
 // --------------------------------------------------------
 userSchema.pre("save", async function () {
   if (!this.accountNumber) {
-    this.accountNumber = "BG" + Math.floor(10000000 + Math.random() * 90000000);
+    // Fix 17: loop until a genuinely unique account number is found
+    let candidate;
+    do {
+      candidate = "BG" + Math.floor(10000000 + Math.random() * 90000000);
+    } while (await mongoose.model("User").exists({ accountNumber: candidate }));
+    this.accountNumber = candidate;
   }
 
-  if (this.isModified("password")) {
-    this.password = await bcrypt.hash(this.password, 10);
+  if (this.isModified("pin")) {
+    this.pin = await bcrypt.hash(this.pin, 10);
   }
 });
 
 // --------------------------------------------------------
-// Compare password during login
+// Compare pin during login
 // --------------------------------------------------------
-userSchema.methods.comparePassword = function (enteredPassword) {
-  return bcrypt.compare(enteredPassword, this.password);
+userSchema.methods.comparePin = function (enteredPin) {
+  return bcrypt.compare(enteredPin, this.pin);
 };
 
 module.exports = mongoose.model("User", userSchema);

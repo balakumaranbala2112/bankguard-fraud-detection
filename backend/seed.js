@@ -2,9 +2,18 @@
 // Run: node seed.js
 
 const mongoose = require("mongoose");
-const dotenv = require("dotenv");
+const dotenv   = require("dotenv");
+const crypto   = require("crypto");
 
 dotenv.config();
+
+// A fixed "demo device" fingerprint so seeded users can log in without 2FA
+// This matches what the backend computes from a typical Chrome/Windows User-Agent
+const DEMO_DEVICE = crypto
+  .createHash("sha256")
+  .update("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+  .digest("hex")
+  .slice(0, 32);
 
 const User = require("./src/models/User");
 const Transaction = require("./src/models/Transaction");
@@ -16,8 +25,7 @@ const logger = require("./src/utils/logger");
 const userData = [
   {
     name: "Balakumaran K",
-    email: "bk@bankguard.com",
-    password: "password123",
+    pin: "1234",
     phone: "+919597437868",
     usualLocation: "Madurai",
     usualAmountMin: 200,
@@ -25,11 +33,11 @@ const userData = [
     usualHourStart: 9,
     usualHourEnd: 22,
     balance: 100000,
+    knownDevices: [DEMO_DEVICE],
   },
   {
     name: "Mowriyan C",
-    email: "mowriyan@bankguard.com",
-    password: "password123",
+    pin: "1234",
     phone: "+919000000002",
     usualLocation: "Chennai",
     usualAmountMin: 100,
@@ -37,11 +45,11 @@ const userData = [
     usualHourStart: 8,
     usualHourEnd: 23,
     balance: 100000,
+    knownDevices: [DEMO_DEVICE],
   },
   {
     name: "Tamil Selvi M",
-    email: "tamilselvi@bankguard.com",
-    password: "password123",
+    pin: "1234",
     phone: "+919000000003",
     usualLocation: "Coimbatore",
     usualAmountMin: 500,
@@ -49,11 +57,11 @@ const userData = [
     usualHourStart: 9,
     usualHourEnd: 21,
     balance: 100000,
+    knownDevices: [DEMO_DEVICE],
   },
   {
     name: "Sangeetha S",
-    email: "sangeetha@bankguard.com",
-    password: "password123",
+    pin: "1234",
     phone: "+919000000004",
     usualLocation: "Trichy",
     usualAmountMin: 50,
@@ -61,11 +69,11 @@ const userData = [
     usualHourStart: 10,
     usualHourEnd: 20,
     balance: 100000,
+    knownDevices: [DEMO_DEVICE],
   },
   {
     name: "Demo User",
-    email: "demo@BankGuard.com",
-    password: "demo1234",
+    pin: "1234",
     phone: "+919000000005",
     usualLocation: "Chennai",
     usualAmountMin: 100,
@@ -73,11 +81,11 @@ const userData = [
     usualHourStart: 9,
     usualHourEnd: 22,
     balance: 100000,
+    knownDevices: [DEMO_DEVICE],
   },
   {
     name: "Attacker",
-    email: "attacker@bankguard.com",
-    password: "attack123",
+    pin: "1234",
     phone: "+919000000006",
     usualLocation: "Unknown",
     usualAmountMin: 0,
@@ -85,11 +93,11 @@ const userData = [
     usualHourStart: 0,
     usualHourEnd: 23,
     balance: 50000,
+    knownDevices: [DEMO_DEVICE],
   },
   {
     name: "Admin",
-    email: "admin@bankguard.com",
-    password: "admin123",
+    pin: "1234",
     phone: "+916369745139",
     usualLocation: "Chennai",
     usualAmountMin: 0,
@@ -98,30 +106,7 @@ const userData = [
     usualHourEnd: 23,
     balance: 0,
     role: "admin",
-  },
-  {
-    name: "Virat Kohli",
-    email: "virat@bankguard.com",
-    password: "password123",
-    phone: "+919000000007",
-    usualLocation: "Delhi",
-    usualAmountMin: 500,
-    usualAmountMax: 5000,
-    usualHourStart: 6,
-    usualHourEnd: 22,
-    balance: 150000,
-  },
-  {
-    name: "Rohit Sharma",
-    email: "rohit@bankguard.com",
-    password: "password123",
-    phone: "+919000000008",
-    usualLocation: "Mumbai",
-    usualAmountMin: 300,
-    usualAmountMax: 4000,
-    usualHourStart: 9,
-    usualHourEnd: 23,
-    balance: 120000,
+    knownDevices: [DEMO_DEVICE],
   },
 ];
 
@@ -154,7 +139,7 @@ const pastTx = (sender, receiver, amount, hour, location, daysAgo) => ({
 const seedDB = async () => {
   try {
     // Connect to MongoDB
-    await mongoose.connect(process.env.MONGO_URI);
+    await mongoose.connect(process.env.MONGODB_URI || process.env.MONGO_URI);
     logger.info("MongoDB connected for seeding");
 
     // Clear existing data
@@ -312,44 +297,44 @@ const seedDB = async () => {
     logger.info("");
     logger.info("Users created:");
     logger.info(
-      `  Balakumaran  | bk@bankguard.com          | ${bala.accountNumber}  | Rs 100,000`,
+      `  Balakumaran  | +919597437868          | ${bala.accountNumber}  | Rs 100,000`,
     );
     logger.info(
-      `  Mowriyan     | mowriyan@bankguard.com    | ${mow.accountNumber}  | Rs 100,000`,
+      `  Mowriyan     | +919000000002    | ${mow.accountNumber}  | Rs 100,000`,
     );
     logger.info(
-      `  Tamil Selvi  | tamilselvi@bankguard.com  | ${tamil.accountNumber}  | Rs 100,000`,
+      `  Tamil Selvi  | +919000000003  | ${tamil.accountNumber}  | Rs 100,000`,
     );
     logger.info(
-      `  Sangeetha    | sangeetha@bankguard.com   | ${sang.accountNumber}  | Rs 100,000`,
+      `  Sangeetha    | +919000000004   | ${sang.accountNumber}  | Rs 100,000`,
     );
     logger.info(
-      `  Demo User    | demo@BankGuard.com      | ${demo.accountNumber}  | Rs 100,000`,
+      `  Demo User    | +919000000005      | ${demo.accountNumber}  | Rs 100,000`,
     );
     logger.info(
-      `  Attacker     | attacker@bankguard.com    | ${users[5].accountNumber}  | Rs 50,000`,
+      `  Attacker     | +919000000006    | ${users[5].accountNumber}  | Rs 50,000`,
     );
     logger.info(
-      `  Admin        | admin@bankguard.com       | ${users[6].accountNumber}  | Admin`,
+      `  Admin        | +916369745139       | ${users[6].accountNumber}  | Admin`,
     );
     logger.info("");
     logger.info("Demo login:");
-    logger.info("  Email    : demo@BankGuard.com");
-    logger.info("  Password : demo1234");
+    logger.info("  Phone : +919000000005");
+    logger.info("  PIN   : 1234");
     logger.info("");
     logger.info("Fraud demo scripts:");
     logger.info(
-      "  BLOCK  — Login as bk@bankguard.com, send Rs 95,000 to any account",
+      "  BLOCK  — Login as +919597437868, send Rs 95,000 to any account",
     );
     logger.info(
-      "  OTP    — Login as bk@bankguard.com, send Rs 4,500 to new account",
+      "  OTP    — Login as +919597437868, send Rs 4,500 to new account",
     );
     logger.info(
-      "  APPROVE — Login as bk@bankguard.com, send Rs 500 to Mowriyan account",
+      "  APPROVE — Login as +919597437868, send Rs 500 to Mowriyan account",
     );
     logger.info("");
     logger.info(
-      "All passwords: password123 (except demo: demo1234, admin: admin123)",
+      "All PINs are: 1234",
     );
     logger.info("=========================");
 
