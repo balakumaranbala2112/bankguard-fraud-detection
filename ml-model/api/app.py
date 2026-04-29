@@ -1,6 +1,10 @@
+import os
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["OMP_NUM_THREADS"] = "1"
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import joblib, numpy as np, os, pandas as pd, warnings
+import joblib, numpy as np, pandas as pd, warnings
 
 # ── Suppress non-breaking pickle version warnings ──────────────────────────
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -286,4 +290,4 @@ if __name__ == '__main__':
     print("  Health  : http://localhost:5000/health")
     print("  Predict : http://localhost:5000/predict")
     print("  Explain : http://localhost:5000/explain\n")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, use_reloader=False, host='0.0.0.0', port=5000)

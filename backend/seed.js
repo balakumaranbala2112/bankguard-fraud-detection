@@ -2,8 +2,8 @@
 // Run: node seed.js
 
 const mongoose = require("mongoose");
-const dotenv   = require("dotenv");
-const crypto   = require("crypto");
+const dotenv = require("dotenv");
+const crypto = require("crypto");
 
 dotenv.config();
 
@@ -38,7 +38,7 @@ const userData = [
   {
     name: "Mowriyan C",
     pin: "1234",
-    phone: "+919000000002",
+    phone: "+919789572418",
     usualLocation: "Chennai",
     usualAmountMin: 100,
     usualAmountMax: 1500,
